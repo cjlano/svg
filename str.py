@@ -35,7 +35,29 @@ for elt in path:
         try: p.append(float(elt))
         except: print elt, " should be numeric"
 
-print p
+
+# Split series of identical commands into individual blocks
+i = 1
+elt = p[0]   # current element
+c = 'M'      # Current command
+while i <= len(p):
+# Expect a command, remember it
+    if str(elt).upper() in cmd.keys():
+        c = elt
+        l = [c]
+        for j in range(0, cmd[c.upper()]):
+             l.append(p[i+j])
+        i += cmd[c.upper()]
+# Get next element
+        try: elt = p[i]
+        except: elt = '' # End of list?
+        i += 1
+        print l
+    else:
+# We expect a new command but did not get one: use previous one and realign
+         elt = c
+         i -= 1
+
 
 # Change lower case command to upper case (relative to absolute)
 

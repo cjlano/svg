@@ -32,5 +32,5 @@ for t in range(0,10):
     im.putpixel((int(round(xy[0])), int(round(xy[1]))), green)
 
 draw.line(bezier, fill=blue)
-im.save(os.path.expanduser("~/public_html/bezier.png"))
-#im.show()
+#im.save(os.path.expanduser("~/public_html/bezier.png"))
+im.show()
