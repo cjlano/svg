@@ -12,6 +12,22 @@ path = re.split(r"([+-]?\ *\d+(?:\.\d*)?|\.\d+)", sys.argv[1])
 
 # Number of expected values per commands
 cmd = {'M':2, 'L':2, 'Z':0, 'H':1, 'V':1, 'A':7, 'Q':4, 'T':2, 'C':6, 'S':4}
+# 'pair' : (x,y)
+# 'coord' : x
+# 'length' : L > 0
+# 'bool' : 0|1
+syntax = {
+'M': ['pair'],
+'L': ['pair'],
+'Z': [],
+'H': ['coord'],
+'V': ['coord'], 
+'A': ['length', 'length', 'length', 'bool', 'bool', 'pair'],
+'Q': ['pair', 'pair'],
+'T': ['pair'],
+'C': ['pair', 'pair', 'pair'],
+'S': ['pair', 'pair']
+}
 
 # clean-up path in p[]
 p = []
@@ -33,7 +49,7 @@ for elt in path:
 # not a command? should be a numeric
     else:
         try: p.append(float(elt))
-        except: print elt, " should be numeric"
+        except ValueError: print elt, " should be numeric"
 
 
 # Split series of identical commands into individual blocks
