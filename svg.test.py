@@ -1,11 +1,11 @@
-import sys
+import sys, os
 import svg
 import Image, ImageDraw
 
 p = svg.Path(sys.argv[1])
 p.parse()
 
-im = Image.new("RGB", (1000,1000), "white")
+im = Image.new("RGB", (800,800), "white")
 draw = ImageDraw.Draw(im)
 
 red = (255,0,0)
@@ -13,4 +13,5 @@ red = (255,0,0)
 for l in p.segments():
     draw.line(l, fill=red)
 
-im.show()
+im.save(os.path.expanduser("~/public_html/bezier.png"))
+#im.show()

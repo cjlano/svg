@@ -113,7 +113,7 @@ class Path:
                 # Symetrical of pt1 against pt0
                 bezier_pts.append(pt1 + pt1 - pt0)
 
-                for i in range(1,nbpts[command]):
+                for i in range(0,nbpts[command]):
                     x = pathlst.pop()
                     y = pathlst.pop()
                     pt = Point(float(x), float(y))
@@ -122,6 +122,7 @@ class Path:
                     bezier_pts.append(pt)
 
                 self.path.append(Bezier(bezier_pts))
+                current_pt = pt
 
             elif command == 'A':
                 for i in range(0,7):
@@ -170,8 +171,11 @@ class Point:
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def __str__(self):
+    def __repr__(self):
         return '(' + format(self.x,'.3f') + ',' + format( self.y,'.3f') + ')'
+
+    def __str__(self):
+        return self.__repr__();
 
     def coord(self):
         return (self.x, self.y)
