@@ -150,6 +150,31 @@ class Path:
         ret.append(seg)
         return ret
 
+    def simplify(self, precision):
+        '''Simplify segment with precision:
+           Remove any point which is in the area of the current line'''
+        ret = []
+        for seg in self.segments():
+            s = []
+            seg.reverse()
+            p1 = seg.pop()
+            s.append(p1)
+            p2 = seg.pop()
+            s.append(p2)
+            while seg:
+                p3 = seg.pop()
+                a = p2 - p1
+                b = p3 - p1
+                if b.length() == 0:
+                    continue
+                c = b.rot(a)
+                if abs(c.y) > precision:
+                    s.append(p3)
+                    p1 = p2
+                    p2 = p3
+            s.append(p3)
+            ret.append(s)
+        return ret
 
 class Point:
     def __init__(self, x=0, y=0):
@@ -234,8 +259,8 @@ class Bezier:
 
     def segments(self):
         segments = []
-        for t in range(0,10):
-            segments.append(self._bezierN(t*0.1))
+        for t in range(0,100):
+            segments.append(self._bezierN(t*0.01))
         return segments
 
     def _bezier1(self, p0, p1, t):
