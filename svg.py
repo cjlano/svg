@@ -48,7 +48,7 @@ class Path:
                     current_pt += pt
                 start_pt = current_pt
 
-                self.path.append(MoveTo())
+                self.path.append(MoveTo(pt))
 
                 # MoveTo with multiple coordinates means LineTo
                 command = 'L'
@@ -140,9 +140,9 @@ class Path:
         seg = []
         for x in self.path:
             if isinstance(x, MoveTo):
-                ret.append(seg)
-                seg = []
-                print("MoveTo")
+                if seg != []:
+                    ret.append(seg)
+                    seg = []
             else:
                 seg += x.segments()
         ret.append(seg)
@@ -226,5 +226,6 @@ class Bezier:
         return res[0]
 
 class MoveTo:
-    def __init__(self):
-        pass
+    def __init__(self, dest):
+        self.dest = dest
+
