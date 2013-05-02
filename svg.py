@@ -1,5 +1,5 @@
 import re
-import numbers
+import numbers, math
 
 COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 
@@ -180,6 +180,17 @@ class Point:
     def coord(self):
         return (self.x, self.y)
 
+    def length(self):
+        '''Vector length, Pythagoras theorem'''
+        return math.sqrt(self.x ** 2 + self.y ** 2)
+
+    def rot(self, vect):
+        '''self rotation vs. vect direction'''
+        l = vect.length()
+        x = self.x * vect.x/l + self.y * vect.y/l
+        y = -self.x * vect.y/l + self.y * vect.x/l
+        return Point(x,y)
+
 class Line:
     def __init__(self, start, end):
         self.start = start
@@ -190,6 +201,11 @@ class Line:
 
     def segments(self):
         return [self.start.coord(), self.end.coord()]
+
+    def length(self):
+        '''Line length, Pythagoras theorem'''
+        s = self.end - self.start
+        return math.sqrt(s.x ** 2 + s.y ** 2)
 
 class Bezier:
     def __init__(self, pts):
