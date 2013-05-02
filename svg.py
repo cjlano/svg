@@ -136,6 +136,8 @@ class Path:
         return '\n'.join(str(x) for x in self.path)
 
     def segments(self):
+        '''Return a list of segments, each segment is ended by a MoveTo.
+           A segment is a list of points coordinates: Points.coord()'''
         ret = []
         seg = []
         for x in self.path:
@@ -178,6 +180,7 @@ class Point:
         return self.__repr__();
 
     def coord(self):
+        '''Return the point tuple (x,y)'''
         return (self.x, self.y)
 
     def length(self):
@@ -192,6 +195,7 @@ class Point:
         return Point(x,y)
 
 class Line:
+    '''A line is an object defined by 2 points'''
     def __init__(self, start, end):
         self.start = start
         self.end = end
@@ -200,7 +204,8 @@ class Line:
         return 'Line from ' + str(self.start) + ' to ' + str(self.end)
 
     def segments(self):
-        return [self.start.coord(), self.end.coord()]
+        ''' Line segments is simply the segment start -> end'''
+        return [self.start, self.end]
 
     def length(self):
         '''Line length, Pythagoras theorem'''
@@ -208,6 +213,11 @@ class Line:
         return math.sqrt(s.x ** 2 + s.y ** 2)
 
 class Bezier:
+    '''Bezier curve class
+       A Bezier curve is defined by its control points
+       Its dimension is equal to the number of control points
+       Note that SVG only support dimension 3 and 4 Bezier curve, respectively
+       Quadratic and Cubic Bezier curve'''
     def __init__(self, pts):
         self.pts = list(pts)
         self.dimension = len(pts)
@@ -217,26 +227,35 @@ class Bezier:
                 ' : ' + ", ".join([str(x) for x in self.pts])
 
     def control_point(self, n):
-        if n > self.dimension:
-            print("Error")
+        if n >= self.dimension:
+            raise LookupError('Index is larger than Bezier curve dimension')
         else:
             return self.pts[n]
 
     def segments(self):
         segments = []
         for t in range(0,10):
-            segments.append(self._bezierN(t*0.1).coord())
+            segments.append(self._bezierN(t*0.1))
         return segments
 
     def _bezier1(self, p0, p1, t):
-        'Bezier curve, one dimension'
+        '''Bezier curve, one dimension
+        Compute the Point corresponding to a linear Bezier curve between
+        p0 and p1 at "time" t '''
         pt = p0 + t * (p1 - p0)
         return pt
 
     def _bezierN(self, t):
-        'Bezier curve, N dimensions'
+        '''Bezier curve, Nth dimension
+        Compute the point of the Nth dimension Bezier curve at "time" t'''
+        # We reduce the N Bezier control points by computing the linear Bezier
+        # point of each control point segment, creating N-1 control points
+        # until we reach one single point
         res = list(self.pts)
+        # We store the resulting Bezier points in res[], recursively
         for n in range(self.dimension, 1, -1):
+            # For each control point of nth dimension,
+            # compute linear Bezier point a t
             for i in range(0,n-1):
                 res[i] = self._bezier1(res[i], res[i+1], t)
         return res[0]
