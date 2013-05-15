@@ -152,7 +152,7 @@ class Path:
 
     def simplify(self, precision):
         '''Simplify segment with precision:
-           Remove any point which is in the area of the current line'''
+           Remove any point which is in ~aligned with the current line'''
         ret = []
         for seg in self.segments():
             s = []
@@ -163,17 +163,28 @@ class Path:
             s.append(p2)
             while seg:
                 p3 = seg.pop()
+                # a is the reference vector
                 a = p2 - p1
+                if a.length() == 0:
+                    p2 = p3
+                    continue
+                # b is the tested vector
                 b = p3 - p1
                 if b.length() == 0:
                     continue
-                c = b.rot(a)
+                # To ease computation, we make vector a the abscissa
+                theta = Angle(a)
+                c = b.rot(theta)
+                # We check that vectors a and b are more or less aligned,
+                # ie rotated(b) ordinate is below precision
+                # We skip the current point is it is ~ aligned
                 if abs(c.y) > precision:
                     s.append(p3)
                     p1 = p2
                     p2 = p3
             s.append(p3)
             ret.append(s)
+
         return ret
 
 class Point:
@@ -212,12 +223,29 @@ class Point:
         '''Vector length, Pythagoras theorem'''
         return math.sqrt(self.x ** 2 + self.y ** 2)
 
-    def rot(self, vect):
-        '''self rotation vs. vect direction'''
-        l = vect.length()
-        x = self.x * vect.x/l + self.y * vect.y/l
-        y = -self.x * vect.y/l + self.y * vect.x/l
+    def rot(self, angle):
+        '''Rotate vector [Origin,self] '''
+        if not isinstance(angle, Angle):
+            return self
+        x = self.x * angle.cos - self.y * angle.sin
+        y = self.x * angle.sin + self.y * angle.cos
         return Point(x,y)
+
+
+class Angle:
+    '''Define the trigonometric angle of vector [Origin,Point]'''
+    def __init__(self, pt):
+        if not isinstance(pt, Point):
+            raise TypeError("pt must be a Point")
+        try:
+            self.cos = pt.x/pt.length()
+            self.sin = pt.y/pt.length()
+        except ZeroDivisionError:
+            self.cos = 1
+            self.sin = 0
+
+    def __neg__(self):
+        return Angle(Point(self.cos, -self.sin))
 
 class Line:
     '''A line is an object defined by 2 points'''
