@@ -12,9 +12,9 @@ red = (255,0,0)
 green = (0,255,0)
 
 for l in p.segments():
-    draw.line([(1*x).coord() for x in l], fill=red)
-for l in p.simplify(0.5):
-    draw.line([(1*x).coord() for x in l], fill=green)
+    draw.point([(1*x).coord() for x in l], fill=red)
+for l in p.simplify(5):
+    draw.point([(1*x).coord() for x in l], fill=green)
 
 #im.save(os.path.expanduser("~/public_html/bezier.png"))
 im.show()

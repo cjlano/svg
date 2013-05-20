@@ -166,15 +166,18 @@ class Path:
                 # a is the reference vector
                 a = p2 - p1
                 if a.length() == 0:
+                    s.pop()
                     p2 = p3
+                    s.append(p2)
                     continue
                 # b is the tested vector
                 b = p3 - p1
+                # Skip if vector b is null
                 if b.length() == 0:
                     continue
                 # To ease computation, we make vector a the abscissa
                 theta = Angle(a)
-                c = b.rot(theta)
+                c = b.rot(-theta)
                 # We check that vectors a and b are more or less aligned,
                 # ie rotated(b) ordinate is below precision
                 # We skip the current point is it is ~ aligned
@@ -182,6 +185,12 @@ class Path:
                     s.append(p3)
                     p1 = p2
                     p2 = p3
+#                else:
+#                    print "=== SKIP ==="
+#                    c.y = 0
+#                    b = c.rot(theta)
+#                    p3 = b + p1
+#                    s.append(p3)
             s.append(p3)
             ret.append(s)
 
