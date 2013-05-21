@@ -6,20 +6,16 @@ COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 class Path:
     """A SVG Path"""
 
-    def __init__(self, pathstr=""):
-        self.pathstr = pathstr
-        self.pathlst = []
+    def __init__(self):
         # The 'path' list contains drawable elements such as Line, Bezier, ...
         self.path = []
 
-    def parse(self, pathstr=""):
+    def parse(self, pathstr):
         """Parse path string and build elements list"""
-        if pathstr != "":
-            self.pathstr = pathstr
 
         # (?:...) : non-capturing version of regular parentheses
         pathlst = re.findall(r"([+-]?\ *\d+(?:\.\d*)?|\.\d+|\ *[%s]\ *)"
-                % COMMANDS, self.pathstr)
+                % COMMANDS, pathstr)
 
         pathlst.reverse()
 
