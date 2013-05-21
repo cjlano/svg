@@ -135,9 +135,9 @@ class Path:
     def __str__(self):
         return '\n'.join(str(x) for x in self.path)
 
-    def segments(self):
+    def segments(self, precision=0):
         '''Return a list of segments, each segment is ended by a MoveTo.
-           A segment is a list of points coordinates: Points.coord()'''
+           A segment is a list of Points'''
         ret = []
         seg = []
         for x in self.path:
@@ -146,7 +146,7 @@ class Path:
                     ret.append(seg)
                     seg = []
             else:
-                seg += x.segments()
+                seg += x.segments(precision)
         ret.append(seg)
         return ret
 
@@ -154,7 +154,7 @@ class Path:
         '''Simplify segment with precision:
            Remove any point which is in ~aligned with the current line'''
         ret = []
-        for seg in self.segments():
+        for seg in self.segments(precision):
             s = []
             seg.reverse()
             p1 = seg.pop()
@@ -265,7 +265,7 @@ class Line:
     def __str__(self):
         return 'Line from ' + str(self.start) + ' to ' + str(self.end)
 
-    def segments(self):
+    def segments(self, precision=0):
         ''' Line segments is simply the segment start -> end'''
         return [self.start, self.end]
 
@@ -294,10 +294,42 @@ class Bezier:
         else:
             return self.pts[n]
 
-    def segments(self):
+    def rlength(self):
+        '''Rough Bezier length: length of control point segments'''
+        pts = list(self.pts)
+        l = 0.0
+        p1 = pts.pop()
+        while pts:
+            p2 = pts.pop()
+            l += Line(p1, p2).length()
+            p1 = p2
+        return l
+
+    def rbbox(self):
+        '''Rough bounding box: return the bounding box (P1,P2) of the Bezier
+        _control_ points'''
+        xmin = None
+        xmax = None
+        ymin = None
+        ymax = None
+        for pt in self.pts:
+            if xmin == None or pt.x < xmin:
+                xmin = pt.x
+
+    def segments(self, precision=0):
+        '''Return a polyline approximation ("segments") of the Bezier curve
+           precision is the minimum significative length of a segment'''
         segments = []
-        for t in range(0,100):
-            segments.append(self._bezierN(t*0.01))
+        # n is the number of Bezier points to draw according to precision
+        if precision != 0:
+            n = int(self.rlength() / precision) + 1
+        else:
+            n = 1000
+        if n < 10: n = 10
+        if n > 1000 : n = 1000
+
+        for t in range(0, n):
+            segments.append(self._bezierN(float(t)/n))
         return segments
 
     def _bezier1(self, p0, p1, t):
