@@ -212,17 +212,28 @@ class Path:
 
 class Point:
     def __init__(self, x=0, y=0):
-        self.x = x
-        self.y = y
+        '''A Point is defined either by a tuple of length 2 or by 2 coordinates'''
+        if isinstance(x, tuple) and len(x) == 2:
+            self.x = x[0]
+            self.y = x[1]
+        elif isinstance(x, numbers.Real) and isinstance(y, numbers.Real):
+            self.x = x
+            self.y = y
+        else:
+            raise TypeError("A Point is defined by 2 numbers or a tuple")
 
     def __add__(self, other):
+        '''Add 2 points by adding coordinates.
+        Try to convert other to Point if necessary'''
         if not isinstance(other, Point):
-            return NotImplemented
+            try: other = Point(other)
+            except: return NotImplemented
         return Point(self.x + other.x, self.y + other.y)
 
     def __sub__(self, other):
         if not isinstance(other, Point):
-            return NotImplemented
+            try: other = Point(other)
+            except: return NotImplemented
         return Point(self.x - other.x, self.y - other.y)
 
     def __mul__(self, other):
@@ -249,7 +260,8 @@ class Point:
     def rot(self, angle):
         '''Rotate vector [Origin,self] '''
         if not isinstance(angle, Angle):
-            return self
+            try: angle = Angle(angle)
+            except: return NotImplemented
         x = self.x * angle.cos - self.y * angle.sin
         y = self.x * angle.sin + self.y * angle.cos
         return Point(x,y)
@@ -277,7 +289,7 @@ class Angle:
             if self.sin < 0:
                 self.angle = -self.angle
         else:
-            raise TypeError("pt must be a number or a Point")
+            raise TypeError("Angle is defined by a number or a Point")
 
     def __neg__(self):
         return Angle(Point(self.cos, -self.sin))
