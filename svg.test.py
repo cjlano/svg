@@ -15,7 +15,7 @@ for l in p.segments(1):
     draw.line([(1*x).coord() for x in l], fill=red)
 #for l in p.simplify(5):
 #    draw.point([(1*x).coord() for x in l], fill=green)
-
-#im.save(os.path.expanduser("~/public_html/bezier.png"))
-im.show()
+draw.rectangle([pt.coord() for pt in p.bbox()], outline='blue')
+im.save(os.path.expanduser("~/public_html/bezier.png"))
+#im.show()
 

@@ -48,7 +48,7 @@ class Path:
                     current_pt += pt
                 start_pt = current_pt
 
-                self.path.append(MoveTo(pt))
+                self.path.append(MoveTo(current_pt))
 
                 # MoveTo with multiple coordinates means LineTo
                 command = 'L'
@@ -196,6 +196,24 @@ class Path:
 
         return ret
 
+    def bbox(self):
+        xmin = None
+        xmax = None
+        ymin = None
+        ymax = None
+        for x in self.path:
+            pmin, pmax = x.bbox()
+            if xmin == None or pmin.x < xmin:
+                xmin = pmin.x
+            if ymin == None or pmin.y < ymin:
+                ymin = pmin.y
+            if xmax == None or pmax.x > xmax:
+                xmax = pmax.x
+            if ymax == None or pmax.y > ymax:
+                ymax = pmax.y
+
+        return (Point(xmin,ymin), Point(xmax,ymax))
+
 class Point:
     def __init__(self, x=0, y=0):
         self.x = x
@@ -274,6 +292,21 @@ class Line:
         s = self.end - self.start
         return math.sqrt(s.x ** 2 + s.y ** 2)
 
+    def bbox(self):
+        if self.start.x < self.end.x:
+            xmin = self.start.x
+            xmax = self.end.x
+        else:
+            xmin = self.end.x
+            xmax = self.start.x
+        if self.start.y < self.end.y:
+            ymin = self.start.y
+            ymax = self.end.y
+        else:
+            ymin = self.end.y
+            ymax = self.start.y
+        return (Point(xmin,ymin),Point(xmax,ymax))
+
 class Bezier:
     '''Bezier curve class
        A Bezier curve is defined by its control points
@@ -305,6 +338,9 @@ class Bezier:
             p1 = p2
         return l
 
+    def bbox(self):
+        return self.rbbox()
+
     def rbbox(self):
         '''Rough bounding box: return the bounding box (P1,P2) of the Bezier
         _control_ points'''
@@ -315,6 +351,14 @@ class Bezier:
         for pt in self.pts:
             if xmin == None or pt.x < xmin:
                 xmin = pt.x
+            if ymin == None or pt.y < ymin:
+                ymin = pt.y
+            if xmax == None or pt.x > xmax:
+                xmax = pt.x
+            if ymax == None or pt.y > ymax:
+                ymax = pt.y
+
+        return (Point(xmin,ymin), Point(xmax,ymax))
 
     def segments(self, precision=0):
         '''Return a polyline approximation ("segments") of the Bezier curve
@@ -357,4 +401,7 @@ class Bezier:
 class MoveTo:
     def __init__(self, dest):
         self.dest = dest
+
+    def bbox(self):
+        return (self.dest, self.dest)
 
