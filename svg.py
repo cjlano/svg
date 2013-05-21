@@ -210,6 +210,20 @@ class Path:
 
         return (Point(xmin,ymin), Point(xmax,ymax))
 
+    # Transformations
+    def scale(self, ratio):
+        p = Path()
+        p.path = [x.scale(ratio) for x in self.path]
+        return p
+    def translate(self, offset):
+        p = Path()
+        p.path = [x.translate(offset) for x in self.path]
+        return p
+    def rotate(self, angle):
+        p = Path()
+        p.path = [x.rotate(angle) for x in self.path]
+        return p
+
 class Point:
     def __init__(self, x=0, y=0):
         '''A Point is defined either by a tuple of length 2 or by 2 coordinates'''
@@ -327,6 +341,13 @@ class Line:
             ymax = self.start.y
         return (Point(xmin,ymin),Point(xmax,ymax))
 
+    def scale(self, ratio):
+        return Line(self.start * ratio, self.end * ratio)
+    def translate(self, offset):
+        return Line(self.start + offset, self.end + offset)
+    def rotate(self, angle):
+        return Line(self.start.rot(angle), self.end.rot(angle))
+
 class Bezier:
     '''Bezier curve class
        A Bezier curve is defined by its control points
@@ -418,10 +439,24 @@ class Bezier:
                 res[i] = self._bezier1(res[i], res[i+1], t)
         return res[0]
 
+    def scale(self, ratio):
+        return Bezier([x * ratio for x in self.pts])
+    def translate(self, offset):
+        return Bezier([x + offset for x in self.pts])
+    def rotate(self, angle):
+        return Bezier([x.rot(angle) for x in self.pts])
+
 class MoveTo:
     def __init__(self, dest):
         self.dest = dest
 
     def bbox(self):
         return (self.dest, self.dest)
+
+    def scale(self, ratio):
+        return MoveTo(self.dest * ratio)
+    def translate(self, offset):
+        return MoveTo(self.dest + offset)
+    def rotate(self, angle):
+        return MoveTo(self.dest.rot(angle))
 
