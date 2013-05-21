@@ -256,16 +256,28 @@ class Point:
 
 
 class Angle:
-    '''Define the trigonometric angle of vector [Origin,Point]'''
-    def __init__(self, pt):
-        if not isinstance(pt, Point):
-            raise TypeError("pt must be a Point")
-        try:
-            self.cos = pt.x/pt.length()
-            self.sin = pt.y/pt.length()
-        except ZeroDivisionError:
-            self.cos = 1
-            self.sin = 0
+    '''Define a trigonometric angle [of a vector] '''
+    def __init__(self, arg):
+        if isinstance(arg, numbers.Real):
+        # We precompute sin and cos for rotations
+            self.angle = arg
+            self.cos = math.cos(self.angle)
+            self.sin = math.sin(self.angle)
+        elif isinstance(arg, Point):
+        # Point angle is the trigonometric angle of the vector [origin, Point]
+            pt = arg
+            try:
+                self.cos = pt.x/pt.length()
+                self.sin = pt.y/pt.length()
+            except ZeroDivisionError:
+                self.cos = 1
+                self.sin = 0
+
+            self.angle = math.acos(self.cos)
+            if self.sin < 0:
+                self.angle = -self.angle
+        else:
+            raise TypeError("pt must be a number or a Point")
 
     def __neg__(self):
         return Angle(Point(self.cos, -self.sin))
