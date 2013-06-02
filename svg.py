@@ -1,5 +1,83 @@
 import re
 import numbers, math
+import xml.etree.ElementTree as ET
+
+class Svg:
+    '''SVG class: use parse to parse a file'''
+    def __init__(self):
+        self.items = []
+
+    def parse(self, filename):
+        self.filename = filename
+        tree = ET.parse(filename)
+        self.root = tree.getroot()
+        if self.root.tag[-3:] != 'svg':
+            raise TypeError('file %s does not seem to be a valid SVG file', filename)
+        self.ns = self.root.tag[:-3]
+        for path in self.root.getiterator(self.ns + 'path'):
+            p = Path()
+            p.parse(path.attrib['d'])
+            self.items.append(p)
+
+    def title(self):
+        t = self.root.find(self.ns + 'title')
+        if t is not None:
+            return t
+        else:
+            return self.filename.split('.')[0]
+
+    def segments(self, precision=0):
+        '''Return a list of segments
+           A segment is a list of Points'''
+        ret = []
+        for x in self.items:
+            ret += x.segments(precision)
+        return ret
+    
+    def simplify(self, precision):
+        '''Simplify segment with precision:
+           Remove any point which is in ~aligned with the current line'''
+        ret = []
+        for x in self.items:
+            ret += x.simplify(precision)
+        return ret
+
+    def bbox(self):
+        xmin = None
+        xmax = None
+        ymin = None
+        ymax = None
+        for x in self.items:
+            pmin, pmax = x.bbox()
+            if xmin == None or pmin.x < xmin:
+                xmin = pmin.x
+            if ymin == None or pmin.y < ymin:
+                ymin = pmin.y
+            if xmax == None or pmax.x > xmax:
+                xmax = pmax.x
+            if ymax == None or pmax.y > ymax:
+                ymax = pmax.y
+
+        return (Point(xmin,ymin), Point(xmax,ymax))
+
+    # Transformations
+    def scale(self, ratio):
+        f = Svg()
+        for x in self.items:
+            f.items.append(x.scale(ratio))
+        return f
+
+    def translate(self, offset):
+        f = Svg()
+        for x in self.items:
+            f.items.append(x.translate(offset))
+        return f
+
+    def rotate(self, angle):
+        f = Svg()
+        for x in self.items:
+            f.items.append(x.rotate(angle))
+        return f
 
 COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 
