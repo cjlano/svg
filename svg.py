@@ -4,8 +4,10 @@ import xml.etree.ElementTree as ET
 
 class Svg:
     '''SVG class: use parse to parse a file'''
-    def __init__(self):
+    def __init__(self, filename=None):
         self.items = []
+        if filename:
+            self.parse(filename)
 
     def parse(self, filename):
         self.filename = filename
@@ -15,8 +17,7 @@ class Svg:
             raise TypeError('file %s does not seem to be a valid SVG file', filename)
         self.ns = self.root.tag[:-3]
         for path in self.root.getiterator(self.ns + 'path'):
-            p = Path()
-            p.parse(path.attrib['d'])
+            p = Path(path.attrib['d'])
             self.items.append(p)
 
     def title(self):
@@ -33,7 +34,7 @@ class Svg:
         for x in self.items:
             ret += x.segments(precision)
         return ret
-    
+
     def simplify(self, precision):
         '''Simplify segment with precision:
            Remove any point which is in ~aligned with the current line'''
@@ -84,9 +85,11 @@ COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 class Path:
     """A SVG Path"""
 
-    def __init__(self):
+    def __init__(self, pathstr=None):
         # The 'path' list contains drawable elements such as Line, Bezier, ...
         self.path = []
+        if pathstr:
+            self.parse(pathstr)
 
     def parse(self, pathstr):
         """Parse path string and build elements list"""

@@ -2,8 +2,7 @@ import sys, os
 import svg
 import Image, ImageDraw
 
-f = svg.Svg()
-f.parse(sys.argv[1])
+f = svg.Svg(sys.argv[1])
 
 im = Image.new("RGB", (800,800), "white")
 draw = ImageDraw.Draw(im)
