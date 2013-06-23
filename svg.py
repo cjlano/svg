@@ -1,6 +1,6 @@
 import re
 import numbers, math
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as etree
 
 class Svg:
     '''SVG class: use parse to parse a file'''
@@ -11,14 +11,25 @@ class Svg:
 
     def parse(self, filename):
         self.filename = filename
-        tree = ET.parse(filename)
+        tree = etree.parse(filename)
         self.root = tree.getroot()
         if self.root.tag[-3:] != 'svg':
             raise TypeError('file %s does not seem to be a valid SVG file', filename)
         self.ns = self.root.tag[:-3]
-        for path in self.root.getiterator(self.ns + 'path'):
-            p = Path(path.attrib['d'])
-            self.items.append(p)
+
+        # Parse XML elements hierarchically with groups <g>
+        self.addGroup(self.items, self.root)
+
+    def addGroup(self, group, element):
+        for elt in element:
+            if elt.tag == self.ns + 'g':
+                g = Group(elt)
+                self.addGroup(g, elt)
+                group.append(g)
+            elif elt.tag == self.ns + 'path':
+                group.append(Path(elt))
+            else:
+                group.append(elt.tag[len(self.ns):])
 
     def title(self):
         t = self.root.find(self.ns + 'title')
@@ -80,16 +91,33 @@ class Svg:
             f.items.append(x.rotate(angle))
         return f
 
+
+class Group:
+    '''Handle svg <g> elements'''
+    def __init__(self, elt=None):
+        self.items = []
+        if elt is not None:
+            self.ident = elt.get('id')
+
+    def append(self, item):
+        self.items.append(item)
+
+    def __repr__(self):
+        return 'Group id ' + self.ident + ':\n' + str(self.items)
+
+
 COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 
 class Path:
     """A SVG Path"""
 
-    def __init__(self, pathstr=None):
+    def __init__(self, pathelt=None):
         # The 'path' list contains drawable elements such as Line, Bezier, ...
         self.path = []
-        if pathstr:
-            self.parse(pathstr)
+        if pathelt is not None:
+            self.ident = pathelt.get('id')
+            self.style = pathelt.get('style')
+            self.parse(pathelt.get('d'))
 
     def parse(self, pathstr):
         """Parse path string and build elements list"""
@@ -211,6 +239,9 @@ class Path:
 
     def __str__(self):
         return '\n'.join(str(x) for x in self.path)
+
+    def __repr__(self):
+        return 'Path id ' + self.ident
 
     def segments(self, precision=0):
         '''Return a list of segments, each segment is ended by a MoveTo.
