@@ -2,10 +2,67 @@ import re
 import numbers, math
 import xml.etree.ElementTree as etree
 
-class Svg:
+class Drawable:
+    '''Abstract class for objects that can be geometrically drawn & transformed'''
+    def __init__(self):
+        # a 'Drawable' is represented as a list of Drawable items
+        self.items = []
+        self.xmin = None
+        self.xmax = None
+        self.ymin = None
+        self.ymax = None
+
+    def bbox(self):
+        '''Bounding box'''
+        for x in self.items:
+            pmin, pmax = x.bbox()
+            if self.xmin == None or pmin.x < self.xmin:
+                self.xmin = pmin.x
+            if self.ymin == None or pmin.y < self.ymin:
+                self.ymin = pmin.y
+            if self.xmax == None or pmax.x > self.xmax:
+                self.xmax = pmax.x
+            if self.ymax == None or pmax.y > self.ymax:
+                self.ymax = pmax.y
+
+        return (Point(self.xmin,self.ymin), Point(self.xmax,self.ymax))
+
+    def segments(self, precision=0):
+        '''Return a list of segments
+           A segment is a list of Points'''
+        ret = []
+        for x in self.items:
+            ret += x.segments(precision)
+        return ret
+
+    def simplify(self, precision):
+        '''Simplify segment with precision:
+           Remove any point which is in ~aligned with the current line'''
+        ret = []
+        for x in self.items:
+            ret += x.simplify(precision)
+        return ret
+
+    # Transformations
+    def scale(self, ratio):
+        for x in self.items:
+            x.scale(ratio)
+        return self
+
+    def translate(self, offset):
+        for x in self.items:
+            x.translate(offset)
+        return self
+
+    def rotate(self, angle):
+        for x in self.items:
+            x.rotate(angle)
+        return self
+
+class Svg(Drawable):
     '''SVG class: use parse to parse a file'''
     def __init__(self, filename=None):
-        self.items = []
+        Drawable.__init__(self)
         if filename:
             self.parse(filename)
 
@@ -28,8 +85,8 @@ class Svg:
                 group.append(g)
             elif elt.tag == self.ns + 'path':
                 group.append(Path(elt))
-            else:
-                group.append(elt.tag[len(self.ns):])
+#            else:
+#                group.append(elt.tag[len(self.ns):])
 
     def title(self):
         t = self.root.find(self.ns + 'title')
@@ -38,64 +95,12 @@ class Svg:
         else:
             return self.filename.split('.')[0]
 
-    def segments(self, precision=0):
-        '''Return a list of segments
-           A segment is a list of Points'''
-        ret = []
-        for x in self.items:
-            ret += x.segments(precision)
-        return ret
-
-    def simplify(self, precision):
-        '''Simplify segment with precision:
-           Remove any point which is in ~aligned with the current line'''
-        ret = []
-        for x in self.items:
-            ret += x.simplify(precision)
-        return ret
-
-    def bbox(self):
-        xmin = None
-        xmax = None
-        ymin = None
-        ymax = None
-        for x in self.items:
-            pmin, pmax = x.bbox()
-            if xmin == None or pmin.x < xmin:
-                xmin = pmin.x
-            if ymin == None or pmin.y < ymin:
-                ymin = pmin.y
-            if xmax == None or pmax.x > xmax:
-                xmax = pmax.x
-            if ymax == None or pmax.y > ymax:
-                ymax = pmax.y
-
-        return (Point(xmin,ymin), Point(xmax,ymax))
-
-    # Transformations
-    def scale(self, ratio):
-        f = Svg()
-        for x in self.items:
-            f.items.append(x.scale(ratio))
-        return f
-
-    def translate(self, offset):
-        f = Svg()
-        for x in self.items:
-            f.items.append(x.translate(offset))
-        return f
-
-    def rotate(self, angle):
-        f = Svg()
-        for x in self.items:
-            f.items.append(x.rotate(angle))
-        return f
 
 
-class Group:
+class Group(Drawable):
     '''Handle svg <g> elements'''
     def __init__(self, elt=None):
-        self.items = []
+        Drawable.__init__(self)
         if elt is not None:
             self.ident = elt.get('id')
 
@@ -108,12 +113,11 @@ class Group:
 
 COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 
-class Path:
+class Path(Drawable):
     """A SVG Path"""
 
     def __init__(self, pathelt=None):
-        # The 'path' list contains drawable elements such as Line, Bezier, ...
-        self.path = []
+        Drawable.__init__(self)
         if pathelt is not None:
             self.ident = pathelt.get('id')
             self.style = pathelt.get('style')
@@ -153,7 +157,7 @@ class Path:
                     current_pt += pt
                 start_pt = current_pt
 
-                self.path.append(MoveTo(current_pt))
+                self.items.append(MoveTo(current_pt))
 
                 # MoveTo with multiple coordinates means LineTo
                 command = 'L'
@@ -161,7 +165,7 @@ class Path:
             elif command == 'Z':
             # Close Path
                 l = Line(current_pt, start_pt)
-                self.path.append(l)
+                self.items.append(l)
 
 
             elif command in 'LHV':
@@ -181,7 +185,7 @@ class Path:
                 if not absolute:
                     pt += current_pt
 
-                self.path.append(Line(current_pt, pt))
+                self.items.append(Line(current_pt, pt))
                 current_pt = pt
 
             elif command in 'CQ':
@@ -196,7 +200,7 @@ class Path:
                         pt += current_pt
                     bezier_pts.append(pt)
 
-                self.path.append(Bezier(bezier_pts))
+                self.items.append(Bezier(bezier_pts))
                 current_pt = pt
 
             elif command in 'TS':
@@ -211,7 +215,7 @@ class Path:
                 bezier_pts.append(current_pt)
 
                 if last_command in last[command]:
-                    pt0 = self.path[-1].control_point(ctrlpt[command])
+                    pt0 = self.items[-1].control_point(ctrlpt[command])
                 else:
                     pt0 = current_pt
                 pt1 = current_pt
@@ -226,7 +230,7 @@ class Path:
                         pt += current_pt
                     bezier_pts.append(pt)
 
-                self.path.append(Bezier(bezier_pts))
+                self.items.append(Bezier(bezier_pts))
                 current_pt = pt
 
             elif command == 'A':
@@ -238,7 +242,7 @@ class Path:
                 pathlst.pop()
 
     def __str__(self):
-        return '\n'.join(str(x) for x in self.path)
+        return '\n'.join(str(x) for x in self.items)
 
     def __repr__(self):
         return 'Path id ' + self.ident
@@ -248,7 +252,7 @@ class Path:
            A segment is a list of Points'''
         ret = []
         seg = []
-        for x in self.path:
+        for x in self.items:
             if isinstance(x, MoveTo):
                 if seg != []:
                     ret.append(seg)
@@ -303,38 +307,6 @@ class Path:
             ret.append(s)
 
         return ret
-
-    def bbox(self):
-        xmin = None
-        xmax = None
-        ymin = None
-        ymax = None
-        for x in self.path:
-            pmin, pmax = x.bbox()
-            if xmin == None or pmin.x < xmin:
-                xmin = pmin.x
-            if ymin == None or pmin.y < ymin:
-                ymin = pmin.y
-            if xmax == None or pmax.x > xmax:
-                xmax = pmax.x
-            if ymax == None or pmax.y > ymax:
-                ymax = pmax.y
-
-        return (Point(xmin,ymin), Point(xmax,ymax))
-
-    # Transformations
-    def scale(self, ratio):
-        p = Path()
-        p.path = [x.scale(ratio) for x in self.path]
-        return p
-    def translate(self, offset):
-        p = Path()
-        p.path = [x.translate(offset) for x in self.path]
-        return p
-    def rotate(self, angle):
-        p = Path()
-        p.path = [x.rotate(angle) for x in self.path]
-        return p
 
 class Point:
     def __init__(self, x=0, y=0):
@@ -454,11 +426,14 @@ class Line:
         return (Point(xmin,ymin),Point(xmax,ymax))
 
     def scale(self, ratio):
-        return Line(self.start * ratio, self.end * ratio)
+        self.start *= ratio
+        self.end *= ratio
     def translate(self, offset):
-        return Line(self.start + offset, self.end + offset)
+        self.start += offset
+        self.end += offset
     def rotate(self, angle):
-        return Line(self.start.rot(angle), self.end.rot(angle))
+        self.start = self.start.rot(angle)
+        self.end = self.end.rot(angle)
 
 class Bezier:
     '''Bezier curve class
@@ -552,11 +527,11 @@ class Bezier:
         return res[0]
 
     def scale(self, ratio):
-        return Bezier([x * ratio for x in self.pts])
+        self.pts = [x * ratio for x in self.pts]
     def translate(self, offset):
-        return Bezier([x + offset for x in self.pts])
+        self.pts = [x + offset for x in self.pts]
     def rotate(self, angle):
-        return Bezier([x.rot(angle) for x in self.pts])
+        self.pts = [x.rot(angle) for x in self.pts]
 
 class MoveTo:
     def __init__(self, dest):
@@ -566,9 +541,9 @@ class MoveTo:
         return (self.dest, self.dest)
 
     def scale(self, ratio):
-        return MoveTo(self.dest * ratio)
+        self.dest *= ratio
     def translate(self, offset):
-        return MoveTo(self.dest + offset)
+        self.dest += offset
     def rotate(self, angle):
-        return MoveTo(self.dest.rot(angle))
+        self.dest = self.dest.rot(angle)
 
