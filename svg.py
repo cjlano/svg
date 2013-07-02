@@ -85,8 +85,11 @@ class Svg(Drawable):
                 group.append(g)
             elif elt.tag == self.ns + 'path':
                 group.append(Path(elt))
-#            else:
-#                group.append(elt.tag[len(self.ns):])
+            elif elt.tag == self.ns + 'circle':
+                group.append(Circle(elt))
+            else:
+                print('Unsupported element: ' + elt.tag)
+                #group.append(elt.tag[len(self.ns):])
 
     def title(self):
         t = self.root.find(self.ns + 'title')
@@ -546,4 +549,37 @@ class MoveTo:
         self.dest += offset
     def rotate(self, angle):
         self.dest = self.dest.rot(angle)
+
+class Circle:
+    '''SVG <circle>'''
+    def __init__(self, elt=None):
+        if elt is not None:
+            self.center = Point(float(elt.get('cx')), float(elt.get('cy')))
+            self.radius = float(elt.get('r'))
+            self.style = elt.get('style')
+            self.ident = elt.get('id')
+
+    def __repr__(self):
+        return 'circle id ' + self.ident
+
+    def bbox(self):
+        '''Bounding box'''
+        pmin = self.center - Point(self.radius, self.radius)
+        pmax = self.center + Point(self.radius, self.radius)
+        return (pmin, pmax)
+
+    def scale(self, ratio):
+        self.center *= ratio
+        self.radius *= ratio
+    def translate(self, offset):
+        self.center += offset
+    def rotate(self, angle):
+        self.center = self.center.rot(angle)
+
+    def segments(self, precision=0):
+        return self
+
+    def simplify(self, precision):
+        return self
+
 
