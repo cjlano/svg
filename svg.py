@@ -77,6 +77,9 @@ class Svg(Drawable):
         # Parse XML elements hierarchically with groups <g>
         self.addGroup(self.items, self.root)
 
+       # Flatten XML tree into a one dimension list
+        self.flatten()
+
     def addGroup(self, group, element):
         for elt in element:
             if elt.tag == self.ns + 'g':
@@ -91,13 +94,20 @@ class Svg(Drawable):
                 print('Unsupported element: ' + elt.tag)
                 #group.append(elt.tag[len(self.ns):])
 
+    def flatten(self):
+        self.drawing = []
+        for i in self.items:
+            if isinstance(i, Group):
+                self.drawing += i.flatten()
+            else:
+                self.drawing.append(i)
+
     def title(self):
         t = self.root.find(self.ns + 'title')
         if t is not None:
             return t
         else:
             return self.filename.split('.')[0]
-
 
 
 class Group(Drawable):
@@ -111,7 +121,16 @@ class Group(Drawable):
         self.items.append(item)
 
     def __repr__(self):
-        return 'Group id ' + self.ident + ':\n' + str(self.items)
+        return 'Group id ' + self.ident + ':\n' + repr(self.items) + '\n'
+
+    def flatten(self):
+        ret = []
+        for i in self.items:
+            if isinstance(i, Group):
+                ret += i.flatten()
+            else:
+                ret.append(i)
+        return ret
 
 
 COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'

@@ -10,8 +10,16 @@ draw = ImageDraw.Draw(im)
 red = (255,0,0)
 green = (0,255,0)
 
-for l in f.segments(1):
-    draw.line([(1*x).coord() for x in l], fill=red)
+for d in f.drawing:
+    if isinstance(d, svg.Path):
+        for l in d.segments(1):
+            draw.line([(1*x).coord() for x in l], fill=red)
+    elif isinstance(d, svg.Circle):
+        a,b = d.bbox()
+        draw.arc([int(x) for x in a.coord()+b.coord()],0,360,green)
+    else:
+        print("Unsupported SVG element" + draw)
+
 #for l in p.simplify(5):
 #    draw.point([(1*x).coord() for x in l], fill=green)
 draw.rectangle([pt.coord() for pt in f.bbox()], outline='blue')
