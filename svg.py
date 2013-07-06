@@ -2,15 +2,20 @@ import re
 import numbers, math
 import xml.etree.ElementTree as etree
 
-class Drawable:
+class Transformable:
     '''Abstract class for objects that can be geometrically drawn & transformed'''
-    def __init__(self):
-        # a 'Drawable' is represented as a list of Drawable items
+    def __init__(self, elt=None):
+        # a 'Transformable' is represented as a list of Transformable items
         self.items = []
+        # Unit transformation matrix on init
+        self.matrix = Matrix()
         self.xmin = None
         self.xmax = None
         self.ymin = None
         self.ymax = None
+        if elt is not None:
+            # Parse transform attibute to update self.matrix
+            self.getTransformations(elt)
 
     def bbox(self):
         '''Bounding box'''
@@ -27,23 +32,63 @@ class Drawable:
 
         return (Point(self.xmin,self.ymin), Point(self.xmax,self.ymax))
 
-    def segments(self, precision=0):
-        '''Return a list of segments
-           A segment is a list of Points'''
-        ret = []
-        for x in self.items:
-            ret += x.segments(precision)
-        return ret
+    # Parse transform field
+    def getTransformations(self, elt):
+        t = elt.get('transform')
+        if t is None: return
 
-    def simplify(self, precision):
-        '''Simplify segment with precision:
-           Remove any point which is in ~aligned with the current line'''
-        ret = []
-        for x in self.items:
-            ret += x.simplify(precision)
-        return ret
+        svg_transforms = [
+                'matrix', 'translate', 'scale', 'rotate', 'skewX', 'skewY']
 
-    # Transformations
+        # match any SVG transformation with its parameter (until final parenthese)
+        # [^)]*    == anything but a closing parenthese
+        # '|'.join == OR-list of SVG transformations
+        transforms = re.findall(
+                '|'.join([x + '[^)]*\)' for x in svg_transforms]), t)
+
+        for t in transforms:
+            op, arg = t.split('(')
+            op = op.strip()
+            # Keep only numbers
+            arg = [float(x) for x in
+                    re.findall(r"([+-]?\ *\d+(?:\.\d*)?|\.\d+)", arg)]
+            print('transform: ' + op + ' '+ str(arg))
+
+            if op == 'matrix':
+                self.matrix *= Matrix(arg)
+
+            if op == 'translate':
+                tx, ty = arg
+                self.matrix *= Matrix([1, 0, 0, 1, tx, ty])
+
+            if op == 'scale':
+                sx = arg[0]
+                if len(arg) == 1: sy = sx
+                else: sy = arg[1]
+                self.matrix *= Matrix([sx, 0, 0, sy, 0, 0])
+
+            if op == 'rotate':
+                cosa = math.cos(math.radians(arg[0]))
+                sina = math.sin(math.radians(arg[0]))
+                if len(arg) != 1:
+                    tx, ty = arg[1:3]
+                    self.matrix *= Matrix([1, 0, 0, 1, tx, ty])
+                self.matrix *= Matrix([cosa, sina, -sina, cosa, 0, 0])
+                if len(arg) != 1:
+                    self.matrix *= Matrix([1, 0, 0, 1, -tx, -ty])
+
+            if op == 'skewX':
+                tana = math.tan(math.radians(arg[0]))
+                self.matrix *= Matrix([1, 0, tana, 1, 0, 0])
+
+            if op == 'skewY':
+                tana = math.tan(math.radians(arg[0]))
+                self.matrix *= Matrix([1, tana, 0, 1, 0, 0])
+
+    def transform(self, matrix=None):
+        for x in self.items:
+            x.transform(self.matrix)
+
     def scale(self, ratio):
         for x in self.items:
             x.scale(ratio)
@@ -59,10 +104,10 @@ class Drawable:
             x.rotate(angle)
         return self
 
-class Svg(Drawable):
+class Svg(Transformable):
     '''SVG class: use parse to parse a file'''
     def __init__(self, filename=None):
-        Drawable.__init__(self)
+        Transformable.__init__(self)
         if filename:
             self.parse(filename)
 
@@ -77,13 +122,15 @@ class Svg(Drawable):
         # Parse XML elements hierarchically with groups <g>
         self.addGroup(self.items, self.root)
 
+        self.transform()
+
        # Flatten XML tree into a one dimension list
         self.flatten()
 
     def addGroup(self, group, element):
         for elt in element:
             if elt.tag == self.ns + 'g':
-                g = Group(elt)
+                g = Group(elt, group)
                 self.addGroup(g, elt)
                 group.append(g)
             elif elt.tag == self.ns + 'path':
@@ -93,6 +140,7 @@ class Svg(Drawable):
             else:
                 print('Unsupported element: ' + elt.tag)
                 #group.append(elt.tag[len(self.ns):])
+
 
     def flatten(self):
         self.drawing = []
@@ -110,14 +158,20 @@ class Svg(Drawable):
             return self.filename.split('.')[0]
 
 
-class Group(Drawable):
+class Group(Transformable):
     '''Handle svg <g> elements'''
-    def __init__(self, elt=None):
-        Drawable.__init__(self)
+    def __init__(self, elt=None, parent=None):
+        Transformable.__init__(self, elt)
         if elt is not None:
             self.ident = elt.get('id')
+        if isinstance(parent, Group):
+            # apply parent transformation to child
+            self.matrix = parent.matrix * self.matrix
 
     def append(self, item):
+        if not isinstance(item, Group):
+            # Group child already have their matrix updated
+            item.matrix = self.matrix * item.matrix
         self.items.append(item)
 
     def __repr__(self):
@@ -132,18 +186,57 @@ class Group(Drawable):
                 ret.append(i)
         return ret
 
+class Matrix:
+    ''' SVG transformation matrix and its operations
+    a SVG matrix is represented as a list of 6 values [a, b, c, d, e, f]
+    (named vect hereafter) which represent the 3x3 matrix
+    ((a, c, e)
+     (b, d, f)
+     (0, 0, 1))
+    see http://www.w3.org/TR/SVG/coords.html#EstablishingANewUserSpace '''
+
+    def __init__(self, vect=[1, 0, 0, 1, 0, 0]):
+        # Unit transformation vect by default
+        if len(vect) != 6:
+            raise ValueError("Bad vect size %d" % len(vect))
+        self.vect = list(vect)
+
+    def __mul__(self, other):
+        '''Matrix multiplication'''
+        if isinstance(other, Matrix):
+            a = self.vect[0] * other.vect[0] + self.vect[2] * other.vect[1]
+            b = self.vect[1] * other.vect[0] + self.vect[3] * other.vect[1]
+            c = self.vect[0] * other.vect[2] + self.vect[2] * other.vect[3]
+            d = self.vect[1] * other.vect[2] + self.vect[3] * other.vect[3]
+            e = self.vect[0] * other.vect[4] + self.vect[2] * other.vect[5] \
+                    + self.vect[4]
+            f = self.vect[1] * other.vect[4] + self.vect[3] * other.vect[5] \
+                    + self.vect[5]
+            return Matrix([a, b, c, d, e, f])
+
+        elif isinstance(other, Point):
+            x = other.x * self.vect[0] + other.y * self.vect[2] + self.vect[4]
+            y = other.x * self.vect[1] + other.y * self.vect[3] + self.vect[5]
+            return Point(x,y)
+
+        else:
+            return NotImplemented
+
+    def __str__(self):
+        return str(self.vect)
+
 
 COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 
-class Path(Drawable):
-    """A SVG Path"""
+class Path(Transformable):
+    '''SVG <path>'''
 
-    def __init__(self, pathelt=None):
-        Drawable.__init__(self)
-        if pathelt is not None:
-            self.ident = pathelt.get('id')
-            self.style = pathelt.get('style')
-            self.parse(pathelt.get('d'))
+    def __init__(self, elt=None):
+        Transformable.__init__(self, elt)
+        if elt is not None:
+            self.ident = elt.get('id')
+            self.style = elt.get('style')
+            self.parse(elt.get('d'))
 
     def parse(self, pathstr):
         """Parse path string and build elements list"""
@@ -332,8 +425,9 @@ class Path(Drawable):
 
 class Point:
     def __init__(self, x=0, y=0):
-        '''A Point is defined either by a tuple of length 2 or by 2 coordinates'''
-        if isinstance(x, tuple) and len(x) == 2:
+        '''A Point is defined either by a tuple/list of length 2 or
+           by 2 coordinates'''
+        if (isinstance(x, tuple) or isinstance(x, list)) and len(x) == 2:
             self.x = x[0]
             self.y = x[1]
         elif isinstance(x, numbers.Real) and isinstance(y, numbers.Real):
@@ -447,6 +541,10 @@ class Line:
             ymax = self.start.y
         return (Point(xmin,ymin),Point(xmax,ymax))
 
+    def transform(self, matrix):
+        self.start = matrix * self.start
+        self.end = matrix * self.end
+
     def scale(self, ratio):
         self.start *= ratio
         self.end *= ratio
@@ -548,6 +646,9 @@ class Bezier:
                 res[i] = self._bezier1(res[i], res[i+1], t)
         return res[0]
 
+    def transform(self, matrix):
+        self.pts = [matrix * x for x in self.pts]
+
     def scale(self, ratio):
         self.pts = [x * ratio for x in self.pts]
     def translate(self, offset):
@@ -562,6 +663,9 @@ class MoveTo:
     def bbox(self):
         return (self.dest, self.dest)
 
+    def transform(self, matrix):
+        self.dest = matrix * self.dest
+
     def scale(self, ratio):
         self.dest *= ratio
     def translate(self, offset):
@@ -569,9 +673,10 @@ class MoveTo:
     def rotate(self, angle):
         self.dest = self.dest.rot(angle)
 
-class Circle:
+class Circle(Transformable):
     '''SVG <circle>'''
     def __init__(self, elt=None):
+        Transformable.__init__(self, elt)
         if elt is not None:
             self.center = Point(float(elt.get('cx')), float(elt.get('cy')))
             self.radius = float(elt.get('r'))
@@ -586,6 +691,9 @@ class Circle:
         pmin = self.center - Point(self.radius, self.radius)
         pmax = self.center + Point(self.radius, self.radius)
         return (pmin, pmax)
+
+    def transform(self, matrix):
+        self.center = self.matrix * self.center
 
     def scale(self, ratio):
         self.center *= ratio
