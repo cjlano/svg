@@ -130,9 +130,12 @@ class Svg(Transformable):
     def addGroup(self, group, element):
         for elt in element:
             if elt.tag == self.ns + 'g':
-                g = Group(elt, group)
-                self.addGroup(g, elt)
+                g = Group(elt)
+                # Append to parent group before looking for child elements
+                # because Group.append() applies transformations
+                # We need to record transformation to propagate to children
                 group.append(g)
+                self.addGroup(g, elt)
             elif elt.tag == self.ns + 'path':
                 group.append(Path(elt))
             elif elt.tag == self.ns + 'circle':
@@ -160,18 +163,13 @@ class Svg(Transformable):
 
 class Group(Transformable):
     '''Handle svg <g> elements'''
-    def __init__(self, elt=None, parent=None):
+    def __init__(self, elt=None):
         Transformable.__init__(self, elt)
         if elt is not None:
             self.ident = elt.get('id')
-        if isinstance(parent, Group):
-            # apply parent transformation to child
-            self.matrix = parent.matrix * self.matrix
 
     def append(self, item):
-        if not isinstance(item, Group):
-            # Group child already have their matrix updated
-            item.matrix = self.matrix * item.matrix
+        item.matrix = self.matrix * item.matrix
         self.items.append(item)
 
     def __repr__(self):
