@@ -377,47 +377,10 @@ class Path(Transformable):
 
     def simplify(self, precision):
         '''Simplify segment with precision:
-           Remove any point which is in ~aligned with the current line'''
+           Remove any point which are ~aligned'''
         ret = []
         for seg in self.segments(precision):
-            s = []
-            seg.reverse()
-            p1 = seg.pop()
-            s.append(p1)
-            p2 = seg.pop()
-            s.append(p2)
-            while seg:
-                p3 = seg.pop()
-                # a is the reference vector
-                a = p2 - p1
-                if a.length() == 0:
-                    s.pop()
-                    p2 = p3
-                    s.append(p2)
-                    continue
-                # b is the tested vector
-                b = p3 - p1
-                # Skip if vector b is null
-                if b.length() == 0:
-                    continue
-                # To ease computation, we make vector a the abscissa
-                theta = Angle(a)
-                c = b.rot(-theta)
-                # We check that vectors a and b are more or less aligned,
-                # ie rotated(b) ordinate is below precision
-                # We skip the current point is it is ~ aligned
-                if abs(c.y) > precision:
-                    s.append(p3)
-                    p1 = p2
-                    p2 = p3
-#                else:
-#                    print "=== SKIP ==="
-#                    c.y = 0
-#                    b = c.rot(theta)
-#                    p3 = b + p1
-#                    s.append(p3)
-            s.append(p3)
-            ret.append(s)
+            ret.append(simplify_segment(seg, precision))
 
         return ret
 
@@ -454,6 +417,12 @@ class Point:
         return Point(self.x * other, self.y * other)
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            try: other = Point(other)
+            except: return NotImplemented
+        return (self.x == other.x) and (self.y == other.y)
 
     def __repr__(self):
         return '(' + format(self.x,'.3f') + ',' + format( self.y,'.3f') + ')'
@@ -523,6 +492,27 @@ class Line:
         '''Line length, Pythagoras theorem'''
         s = self.end - self.start
         return math.sqrt(s.x ** 2 + s.y ** 2)
+
+    def pdistance(self, p):
+        '''Perpendicular distance between this Line and a given Point p'''
+        if not isinstance(p, Point):
+            return NotImplemented
+
+        if self.start == self.end:
+        # Distance from a Point to another Point is length of a line
+            return Line(self.start, p).length()
+
+        s = self.end - self.start
+        if s.x == 0:
+        # Vertical Line => pdistance is the difference of abscissa
+            return abs(self.start.x - p.x)
+        else:
+        # That's 2-D perpendicular distance formulae (ref: Wikipedia)
+            slope = s.y/s.x
+            # intercept: Crossing with ordinate y-axis
+            intercept = self.start.y - (slope * self.start.x)
+            return abs(slope * p.x - p.y + intercept) / math.sqrt(slope ** 2 + 1)
+
 
     def bbox(self):
         if self.start.x < self.end.x:
@@ -706,5 +696,30 @@ class Circle(Transformable):
 
     def simplify(self, precision):
         return self
+
+def simplify_segment(segment, epsilon):
+    '''Ramer-Douglas-Peucker algorithm'''
+    if len(segment) < 3 or epsilon <= 0:
+        return segment[:]
+
+    l = Line(segment[0], segment[-1]) # Longest line
+
+    # Find the furthest point from the line
+    maxDist = 0
+    index = None
+    for i,p in enumerate(segment[1:]):
+        dist = l.pdistance(p)
+        if (dist > maxDist):
+            maxDist = dist
+            index = i+1 # enumerate starts at segment[1]
+
+    if maxDist > epsilon:
+        # Recursively call with segment splited in 2 on its furthest point
+        r1 = simplify_segment(segment[:index+1], epsilon)
+        r2 = simplify_segment(segment[index:], epsilon)
+        # Remove redundant 'middle' Point
+        return r1[:-1] + r2
+    else:
+        return [segment[0], segment[-1]]
 
 
