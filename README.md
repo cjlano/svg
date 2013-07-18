@@ -10,7 +10,8 @@ Capabilities:
  - Interpolate SVG Path as a series of segments
  - Able to simplify segments given a precision using Ramer-Douglas-Peucker algorithm
 
-
 Not (yet) supported:
  - SVG Path Arc ('A')
  - Non-linear transformation drawing (SkewX, ...)
+
+License: GPLv2+
