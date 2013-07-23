@@ -405,11 +405,22 @@ class Path(Transformable):
 class Point:
     def __init__(self, x=0, y=0):
         '''A Point is defined either by a tuple/list of length 2 or
-           by 2 coordinates'''
+           by 2 coordinates
+        >>> Point(1,2)
+        (1.000,2.000)
+        >>> Point((1,2))
+        (1.000,2.000)
+        >>> Point([1,2])
+        (1.000,2.000)
+        >>> Point('1', '2')
+        Traceback (most recent call last):
+            ...
+        TypeError: A Point is defined by 2 numbers or a tuple
+        '''
         if (isinstance(x, tuple) or isinstance(x, list)) and len(x) == 2:
-            self.x = x[0]
-            self.y = x[1]
-        elif isinstance(x, numbers.Real) and isinstance(y, numbers.Real):
+            x,y = x
+
+        if isinstance(x, numbers.Real) and isinstance(y, numbers.Real):
             self.x = x
             self.y = y
         else:
@@ -417,19 +428,35 @@ class Point:
 
     def __add__(self, other):
         '''Add 2 points by adding coordinates.
-        Try to convert other to Point if necessary'''
+        Try to convert other to Point if necessary
+        >>> Point(1,2) + Point(3,2)
+        (4.000,4.000)
+        >>> Point(1,2) + (3,2)
+        (4.000,4.000)'''
         if not isinstance(other, Point):
             try: other = Point(other)
             except: return NotImplemented
         return Point(self.x + other.x, self.y + other.y)
 
     def __sub__(self, other):
+        '''Substract two Points.
+        >>> Point(1,2) - Point(3,2)
+        (-2.000,0.000)
+        '''
         if not isinstance(other, Point):
             try: other = Point(other)
             except: return NotImplemented
         return Point(self.x - other.x, self.y - other.y)
 
     def __mul__(self, other):
+        '''Multiply a Point with a constant.
+        >>> 2 * Point(1,2)
+        (2.000,4.000)
+        >>> Point(1,2) * Point(1,2) #doctest:+IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+            ...
+        TypeError:
+        '''
         if not isinstance(other, numbers.Real):
             return NotImplemented
         return Point(self.x * other, self.y * other)
@@ -437,6 +464,12 @@ class Point:
         return self.__mul__(other)
 
     def __eq__(self, other):
+        '''Test equality
+        >>> Point(1,2) == (1,2)
+        True
+        >>> Point(1,2) == Point(2,1)
+        False
+        '''
         if not isinstance(other, Point):
             try: other = Point(other)
             except: return NotImplemented
@@ -739,5 +772,4 @@ def simplify_segment(segment, epsilon):
         return r1[:-1] + r2
     else:
         return [segment[0], segment[-1]]
-
 
