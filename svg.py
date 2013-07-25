@@ -281,7 +281,7 @@ class Path(Transformable):
             # MoveTo
                 x = pathlst.pop()
                 y = pathlst.pop()
-                pt = Point(float(x), float(y))
+                pt = Point(x, y)
                 if absolute:
                     current_pt = pt
                 else:
@@ -312,7 +312,7 @@ class Path(Transformable):
                 if command in 'LV':
                     y = pathlst.pop()
 
-                pt = Point(float(x), float(y))
+                pt = Point(x, y)
                 if not absolute:
                     pt += current_pt
 
@@ -326,7 +326,7 @@ class Path(Transformable):
                 for i in range(1,dimension[command]):
                     x = pathlst.pop()
                     y = pathlst.pop()
-                    pt = Point(float(x), float(y))
+                    pt = Point(x, y)
                     if not absolute:
                         pt += current_pt
                     bezier_pts.append(pt)
@@ -356,7 +356,7 @@ class Path(Transformable):
                 for i in range(0,nbpts[command]):
                     x = pathlst.pop()
                     y = pathlst.pop()
-                    pt = Point(float(x), float(y))
+                    pt = Point(x, y)
                     if not absolute:
                         pt += current_pt
                     bezier_pts.append(pt)
@@ -403,7 +403,7 @@ class Path(Transformable):
         return ret
 
 class Point:
-    def __init__(self, x=0, y=0):
+    def __init__(self, x=None, y=None):
         '''A Point is defined either by a tuple/list of length 2 or
            by 2 coordinates
         >>> Point(1,2)
@@ -413,17 +413,21 @@ class Point:
         >>> Point([1,2])
         (1.000,2.000)
         >>> Point('1', '2')
-        Traceback (most recent call last):
-            ...
-        TypeError: A Point is defined by 2 numbers or a tuple
+        (1.000,2.000)
+        >>> Point(('1', None))
+        (1.000,0.000)
         '''
         if (isinstance(x, tuple) or isinstance(x, list)) and len(x) == 2:
             x,y = x
 
-        if isinstance(x, numbers.Real) and isinstance(y, numbers.Real):
-            self.x = x
-            self.y = y
-        else:
+        # Handle empty parameter(s) which should be interpreted as 0
+        if x is None: x = 0
+        if y is None: y = 0
+
+        try:
+            self.x = float(x)
+            self.y = float(y)
+        except:
             raise TypeError("A Point is defined by 2 numbers or a tuple")
 
     def __add__(self, other):
@@ -717,7 +721,7 @@ class Circle(Transformable):
     def __init__(self, elt=None):
         Transformable.__init__(self, elt)
         if elt is not None:
-            self.center = Point(float(elt.get('cx')), float(elt.get('cy')))
+            self.center = Point(elt.get('cx'), elt.get('cy'))
             self.radius = float(elt.get('r'))
             self.style = elt.get('style')
             self.ident = elt.get('id')
