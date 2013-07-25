@@ -76,7 +76,9 @@ class Transformable:
                 self.matrix *= Matrix(arg)
 
             if op == 'translate':
-                tx, ty = arg
+                tx = arg[0]
+                if len(arg) == 1: ty = 0
+                else: ty = arg[1]
                 self.matrix *= Matrix([1, 0, 0, 1, tx, ty])
 
             if op == 'scale':
