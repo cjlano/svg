@@ -20,6 +20,24 @@ import re
 import numbers, math
 import xml.etree.ElementTree as etree
 
+# Regex commonly used
+number_re = r'[+-]?\ *\d+(?:\.\d*)?|\.\d+'
+unit_re = r'em|ex|px|in|cm|mm|pt|pc|%'
+
+# Unit converter
+unit_convert = {
+        None: 1,           # Default unit (same as pixel)
+        'px': 1,           # px: pixel. Default SVG unit
+        'em': 10,          # 1 em = 10 px FIXME
+        'ex': 5,           # 1 ex =  5 px FIXME
+        'in': 96,          # 1 in = 96 px
+        'cm': 96 / 2.54,   # 1 cm = 1/2.54 in
+        'mm': 96 / 25.4,   # 1 mm = 1/25.4 in
+        'pt': 96 / 72.0,   # 1 pt = 1/72 in
+        'pc': 96 / 6.0,    # 1 pc = 1/6 in
+        '%' :  1 / 100.0   # 1 percent
+        }
+
 class Transformable:
     '''Abstract class for objects that can be geometrically drawn & transformed'''
     def __init__(self, elt=None):
@@ -31,6 +49,7 @@ class Transformable:
         self.xmax = None
         self.ymin = None
         self.ymax = None
+        self.viewport = Point(800, 600) # default viewport is 800x600
         if elt is not None:
             # Parse transform attibute to update self.matrix
             self.getTransformations(elt)
@@ -109,6 +128,36 @@ class Transformable:
         for x in self.items:
             x.transform(self.matrix)
 
+    def length(self, v, mode='xy'):
+        # Handle empty (non-existing) length element
+        if v is None:
+            return 0
+
+        # Get length value
+        m = re.search(number_re, v)
+        if m: value = m.group(0)
+        else: raise TypeError(v + 'is not a valid length')
+
+        # Get length unit
+        m = re.search(unit_re, v)
+        if m: unit = m.group(0)
+        else: unit = None
+
+        if unit == '%':
+            if mode == 'x':
+                return float(value) * unit_convert[unit] * self.viewport.x
+            if mode == 'y':
+                return float(value) * unit_convert[unit] * self.viewport.y
+            if mode == 'xy':
+                return float(value) * unit_convert[unit] * self.viewport.x # FIXME
+
+        return float(value) * unit_convert[unit]
+
+    def xlength(self, x):
+        return self.length(x, 'x')
+    def ylength(self, y):
+        return self.length(y, 'y')
+
     def scale(self, ratio):
         for x in self.items:
             x.scale(ratio)
@@ -139,8 +188,27 @@ class Svg(Transformable):
             raise TypeError('file %s does not seem to be a valid SVG file', filename)
         self.ns = self.root.tag[:-3]
 
+        # Create a top Group to group all other items (useful for viewBox elt)
+        top_group = Group()
+        self.items.append(top_group)
+
+        # SVG dimension
+        width = self.xlength(self.root.get('width'))
+        height = self.ylength(self.root.get('height'))
+        # update viewport
+        top_group.viewport = Point(width, height)
+
+        # viewBox
+        if self.root.get('viewBox') is not None:
+            viewBox = re.findall(number_re, self.root.get('viewBox'))
+            sx = width / float(viewBox[2])
+            sy = height / float(viewBox[3])
+            tx = -float(viewBox[0])
+            ty = -float(viewBox[1])
+            top_group.matrix = Matrix([sx, 0, 0, sy, tx, ty])
+
         # Parse XML elements hierarchically with groups <g>
-        self.addGroup(self.items, self.root)
+        self.addGroup(top_group, self.root)
 
         self.transform()
 
@@ -190,6 +258,7 @@ class Group(Transformable):
 
     def append(self, item):
         item.matrix = self.matrix * item.matrix
+        item.viewport = self.viewport
         self.items.append(item)
 
     def __repr__(self):
@@ -723,8 +792,9 @@ class Circle(Transformable):
     def __init__(self, elt=None):
         Transformable.__init__(self, elt)
         if elt is not None:
-            self.center = Point(elt.get('cx'), elt.get('cy'))
-            self.radius = float(elt.get('r'))
+            self.center = Point(self.xlength(elt.get('cx')),
+                                self.ylength(elt.get('cy')))
+            self.radius = self.length(elt.get('r'))
             self.style = elt.get('style')
             self.ident = elt.get('id')
 
