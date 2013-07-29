@@ -312,6 +312,11 @@ class Matrix:
     def __str__(self):
         return str(self.vect)
 
+    def xlength(self, x):
+        return x * self.vect[0]
+    def ylength(self, y):
+        return x * self.vect[3]
+
 
 COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 
@@ -809,6 +814,7 @@ class Circle(Transformable):
 
     def transform(self, matrix):
         self.center = self.matrix * self.center
+        self.radius = self.matrix.xlength(self.radius)
 
     def scale(self, ratio):
         self.center *= ratio
