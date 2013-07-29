@@ -1,28 +1,60 @@
-import sys, os
+import sys, os, math
 import svg
-import Image, ImageDraw
+import cairo
+
+def draw_with_cairo(cr, drawing):
+    for d in drawing:
+        if isinstance(d, svg.Path):
+            for elt in d.items:
+                if isinstance(elt, svg.MoveTo):
+                    x,y = elt.dest.coord()
+                    cr.move_to(x,y)
+                elif isinstance(elt, svg.Line):
+                    x,y = elt.end.coord()
+                    cr.line_to(x,y)
+                elif isinstance(elt, svg.Bezier):
+                    if elt.dimension == 3:
+                        a,c = elt.pts[1:]
+                        b = c
+                    else:
+                        a,b,c = elt.pts[1:]
+                    cr.curve_to(a.x, a.y, b.x, b.y, c.x, c.y)
+        if isinstance(d, svg.Circle):
+            cx, cy = d.center.coord()
+            cr.move_to(cx+d.radius, cy)
+            cr.arc(cx, cy, d.radius, 0, 2*math.pi)
+
+
+def draw_with_segments(cr, drawing):
+    for d in drawing:
+        if isinstance(d, svg.Path):
+            for l in d.segments(1):
+                x,y = l[0].coord()
+                cr.move_to(x,y)
+                for pt in l[1:]:
+                    x,y = pt.coord()
+                    cr.line_to(x,y)
+    #    elif isinstance(d, svg.Circle):
+    #        a,b = d.bbox()
+    #        draw.arc([int(x) for x in a.coord()+b.coord()],0,360,green)
+        else:
+            print("Unsupported SVG element")
 
 f = svg.Svg(sys.argv[1])
 
-im = Image.new("RGB", (800,800), "white")
-draw = ImageDraw.Draw(im)
+a,b = f.bbox()
 
-red = (255,0,0)
-green = (0,255,0)
+width, height = (a+b).coord()
+surface = cairo.SVGSurface("test.svg", width, height)
+cr = cairo.Context(surface)
 
-for d in f.drawing:
-    if isinstance(d, svg.Path):
-        for l in d.segments(1):
-            draw.line([(1*x).coord() for x in l], fill=red)
-    elif isinstance(d, svg.Circle):
-        a,b = d.bbox()
-        draw.arc([int(x) for x in a.coord()+b.coord()],0,360,green)
-    else:
-        print("Unsupported SVG element" + draw)
+cr.set_source_rgb(0,0,0)
+cr.set_line_width(1)
 
-#for l in p.simplify(5):
-#    draw.point([(1*x).coord() for x in l], fill=green)
-draw.rectangle([pt.coord() for pt in f.bbox()], outline='blue')
-#im.save(os.path.expanduser("~/public_html/bezier.png"))
-im.show()
+draw_with_cairo(cr, f.drawing)
 
+cr.stroke()
+
+surface.write_to_png('test.png')
+cr.show_page()
+surface.finish()
