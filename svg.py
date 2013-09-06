@@ -441,9 +441,31 @@ class Path(Transformable):
                 current_pt = pt
 
             elif command == 'A':
-                for i in range(0,7):
-                    pathlst.pop()
+                rx = pathlst.pop()
+                ry = pathlst.pop()
+                xrot = pathlst.pop()
+                # Arc flags are not necesarily sepatated numbers
+                flags = pathlst.pop().strip()
+                large_arc_flag = flags[0]
+                if large_arc_flag not in '01':
+                    print('Arc parsing failure')
+                    break
+
+                if len(flags) > 1:  flags = flags[1:].strip()
+                else:               flags = pathlst.pop().strip()
+                sweep_flag = flags[0]
+                if sweep_flag not in '01':
+                    print('Arc parsing failure')
+                    break
+
+                if len(flags) > 1:  x = flags[1:]
+                else:               x = pathlst.pop()
+                y = pathlst.pop()
                 # TODO
+                print('ARC: ' +
+                    ', '.join([rx, ry, xrot, large_arc_flag, sweep_flag, x, y]))
+#                self.items.append(
+#                    Arc(rx, ry, xrot, large_arc_flag, sweep_flag, Point(x, y)))
 
             else:
                 pathlst.pop()
