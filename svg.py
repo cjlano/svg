@@ -45,10 +45,6 @@ class Transformable:
         self.items = []
         # Unit transformation matrix on init
         self.matrix = Matrix()
-        self.xmin = None
-        self.xmax = None
-        self.ymin = None
-        self.ymax = None
         self.viewport = Point(800, 600) # default viewport is 800x600
         if elt is not None:
             # Parse transform attibute to update self.matrix
@@ -56,18 +52,13 @@ class Transformable:
 
     def bbox(self):
         '''Bounding box'''
-        for x in self.items:
-            pmin, pmax = x.bbox()
-            if self.xmin == None or pmin.x < self.xmin:
-                self.xmin = pmin.x
-            if self.ymin == None or pmin.y < self.ymin:
-                self.ymin = pmin.y
-            if self.xmax == None or pmax.x > self.xmax:
-                self.xmax = pmax.x
-            if self.ymax == None or pmax.y > self.ymax:
-                self.ymax = pmax.y
+        bboxes = [x.bbox() for x in self.items]
+        xmin = min([b[0].x for b in bboxes])
+        xmax = max([b[1].x for b in bboxes])
+        ymin = min([b[0].y for b in bboxes])
+        ymax = max([b[1].y for b in bboxes])
 
-        return (Point(self.xmin,self.ymin), Point(self.xmax,self.ymax))
+        return (Point(xmin,ymin), Point(xmax,ymax))
 
     # Parse transform field
     def getTransformations(self, elt):
@@ -668,18 +659,11 @@ class Line:
 
 
     def bbox(self):
-        if self.start.x < self.end.x:
-            xmin = self.start.x
-            xmax = self.end.x
-        else:
-            xmin = self.end.x
-            xmax = self.start.x
-        if self.start.y < self.end.y:
-            ymin = self.start.y
-            ymax = self.end.y
-        else:
-            ymin = self.end.y
-            ymax = self.start.y
+        xmin = min(self.start.x, self.end.x)
+        xmax = max(self.start.x, self.end.x)
+        ymin = min(self.start.y, self.end.y)
+        ymax = max(self.start.y, self.end.y)
+
         return (Point(xmin,ymin),Point(xmax,ymax))
 
     def transform(self, matrix):
@@ -733,19 +717,10 @@ class Bezier:
     def rbbox(self):
         '''Rough bounding box: return the bounding box (P1,P2) of the Bezier
         _control_ points'''
-        xmin = None
-        xmax = None
-        ymin = None
-        ymax = None
-        for pt in self.pts:
-            if xmin == None or pt.x < xmin:
-                xmin = pt.x
-            if ymin == None or pt.y < ymin:
-                ymin = pt.y
-            if xmax == None or pt.x > xmax:
-                xmax = pt.x
-            if ymax == None or pt.y > ymax:
-                ymax = pt.y
+        xmin = min([p.x for p in self.pts])
+        xmax = max([p.x for p in self.pts])
+        ymin = min([p.y for p in self.pts])
+        ymax = max([p.y for p in self.pts])
 
         return (Point(xmin,ymin), Point(xmax,ymax))
 
