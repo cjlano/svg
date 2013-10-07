@@ -16,9 +16,12 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import sys
 import re
 import numbers, math
 import xml.etree.ElementTree as etree
+
+svg_ns = '{http://www.w3.org/2000/svg}'
 
 # Regex commonly used
 number_re = r'[+-]?\ *\d+(?:\.\d*)?|\.\d+'
@@ -166,6 +169,9 @@ class Transformable:
 
 class Svg(Transformable):
     '''SVG class: use parse to parse a file'''
+    # class Svg handles the <svg> tag
+    # tag = 'svg'
+
     def __init__(self, filename=None):
         Transformable.__init__(self)
         if filename:
@@ -175,9 +181,8 @@ class Svg(Transformable):
         self.filename = filename
         tree = etree.parse(filename)
         self.root = tree.getroot()
-        if self.root.tag[-3:] != 'svg':
+        if self.root.tag != svg_ns + 'svg':
             raise TypeError('file %s does not seem to be a valid SVG file', filename)
-        self.ns = self.root.tag[:-3]
 
         # Create a top Group to group all other items (useful for viewBox elt)
         top_group = Group()
@@ -199,30 +204,12 @@ class Svg(Transformable):
             top_group.matrix = Matrix([sx, 0, 0, sy, tx, ty])
 
         # Parse XML elements hierarchically with groups <g>
-        self.addGroup(top_group, self.root)
+        top_group.append(self.root)
 
         self.transform()
 
        # Flatten XML tree into a one dimension list
         self.flatten()
-
-    def addGroup(self, group, element):
-        for elt in element:
-            if elt.tag == self.ns + 'g':
-                g = Group(elt)
-                # Append to parent group before looking for child elements
-                # because Group.append() applies transformations
-                # We need to record transformation to propagate to children
-                group.append(g)
-                self.addGroup(g, elt)
-            elif elt.tag == self.ns + 'path':
-                group.append(Path(elt))
-            elif elt.tag == self.ns + 'circle':
-                group.append(Circle(elt))
-            else:
-                print('Unsupported element: ' + elt.tag)
-                #group.append(elt.tag[len(self.ns):])
-
 
     def flatten(self):
         self.drawing = []
@@ -233,7 +220,7 @@ class Svg(Transformable):
                 self.drawing.append(i)
 
     def title(self):
-        t = self.root.find(self.ns + 'title')
+        t = self.root.find(svg_ns + 'title')
         if t is not None:
             return t
         else:
@@ -242,15 +229,30 @@ class Svg(Transformable):
 
 class Group(Transformable):
     '''Handle svg <g> elements'''
+    # class Group handles the <g> tag
+    tag = 'g'
+
     def __init__(self, elt=None):
         Transformable.__init__(self, elt)
         if elt is not None:
-            self.ident = elt.get('id')
+            self.ident = elt.get('id', '')
 
-    def append(self, item):
-        item.matrix = self.matrix * item.matrix
-        item.viewport = self.viewport
-        self.items.append(item)
+    def append(self, element):
+        for elt in element:
+            elt_class = svgClass.get(elt.tag, None)
+            if elt_class is None:
+                continue
+            print('Element %s handled by %s' % (elt.tag, elt_class))
+            # instanciate elt associated class (e.g. <path>: item = Path(elt)
+            item = elt_class(elt)
+            # Apply group matrix to the newly created object
+            item.matrix = self.matrix * item.matrix
+            item.viewport = self.viewport
+            
+            self.items.append(item)
+            # Recursively append if elt is a <g> (group)
+            if elt.tag == svg_ns + 'g':
+                item.append(elt)
 
     def __repr__(self):
         return 'Group id ' + self.ident + ':\n' + repr(self.items) + '\n'
@@ -313,6 +315,8 @@ COMMANDS = 'MmZzLlHhVvCcSsQqTtAa'
 
 class Path(Transformable):
     '''SVG <path>'''
+    # class Path handles the <path> tag
+    tag = 'path'
 
     def __init__(self, elt=None):
         Transformable.__init__(self, elt)
@@ -791,6 +795,9 @@ class MoveTo:
 
 class Circle(Transformable):
     '''SVG <circle>'''
+    # class Circle handles the <circle> tag
+    tag = 'circle'
+    
     def __init__(self, elt=None):
         Transformable.__init__(self, elt)
         if elt is not None:
@@ -851,4 +858,16 @@ def simplify_segment(segment, epsilon):
         return r1[:-1] + r2
     else:
         return [segment[0], segment[-1]]
+
+## Code executed on module load ##
+
+# SVG tag handler classes are initialized here
+# (classes must be defined before)
+import inspect
+svgClass = {}
+# Register all classes with attribute 'tag' in svgClass dict
+for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass):
+    tag = getattr(cls, 'tag', None)
+    if tag:
+        svgClass[svg_ns + tag] = cls
 
