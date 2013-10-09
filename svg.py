@@ -46,10 +46,12 @@ class Transformable:
     def __init__(self, elt=None):
         # a 'Transformable' is represented as a list of Transformable items
         self.items = []
+        self.id = hex(id(self))
         # Unit transformation matrix on init
         self.matrix = Matrix()
         self.viewport = Point(800, 600) # default viewport is 800x600
         if elt is not None:
+            self.id = elt.get('id', self.id)
             # Parse transform attibute to update self.matrix
             self.getTransformations(elt)
 
@@ -234,8 +236,6 @@ class Group(Transformable):
 
     def __init__(self, elt=None):
         Transformable.__init__(self, elt)
-        if elt is not None:
-            self.ident = elt.get('id', '')
 
     def append(self, element):
         for elt in element:
@@ -255,7 +255,7 @@ class Group(Transformable):
                 item.append(elt)
 
     def __repr__(self):
-        return 'Group id ' + self.ident + ':\n' + repr(self.items) + '\n'
+        return '<Group ' + self.id + '>: ' + repr(self.items)
 
     def flatten(self):
         ret = []
@@ -321,7 +321,6 @@ class Path(Transformable):
     def __init__(self, elt=None):
         Transformable.__init__(self, elt)
         if elt is not None:
-            self.ident = elt.get('id')
             self.style = elt.get('style')
             self.parse(elt.get('d'))
 
@@ -469,7 +468,7 @@ class Path(Transformable):
         return '\n'.join(str(x) for x in self.items)
 
     def __repr__(self):
-        return 'Path id ' + self.ident
+        return '<Path ' + self.id + '>'
 
     def segments(self, precision=0):
         '''Return a list of segments, each segment is ended by a MoveTo.
@@ -805,10 +804,9 @@ class Circle(Transformable):
                                 self.ylength(elt.get('cy')))
             self.radius = self.length(elt.get('r'))
             self.style = elt.get('style')
-            self.ident = elt.get('id')
 
     def __repr__(self):
-        return 'circle id ' + self.ident
+        return 'circle ' + self.id + '>'
 
     def bbox(self):
         '''Bounding box'''
