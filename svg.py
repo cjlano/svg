@@ -20,6 +20,7 @@ import sys
 import re
 import numbers, math
 import xml.etree.ElementTree as etree
+import json
 
 svg_ns = '{http://www.w3.org/2000/svg}'
 
@@ -228,6 +229,9 @@ class Svg(Transformable):
         else:
             return self.filename.split('.')[0]
 
+    def json(self):
+        return self.items
+
 
 class Group(Transformable):
     '''Handle svg <g> elements'''
@@ -256,6 +260,9 @@ class Group(Transformable):
 
     def __repr__(self):
         return '<Group ' + self.id + '>: ' + repr(self.items)
+
+    def json(self):
+        return {'Group ' + self.id : self.items}
 
     def flatten(self):
         ret = []
@@ -856,6 +863,17 @@ def simplify_segment(segment, epsilon):
         return r1[:-1] + r2
     else:
         return [segment[0], segment[-1]]
+
+# overwrite JSONEncoder for svg classes which have defined a .json() method
+class JSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if not isinstance(obj, tuple(svgClass.values() + [Svg])):
+            return json.JSONEncoder.default(self, obj)
+
+        if not hasattr(obj, 'json'):
+            return repr(obj)
+
+        return obj.json()
 
 ## Code executed on module load ##
 
