@@ -17,6 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import sys
+import os
 import re
 import numbers, math
 import xml.etree.ElementTree as etree
@@ -227,7 +228,7 @@ class Svg(Transformable):
         if t is not None:
             return t
         else:
-            return self.filename.split('.')[0]
+            return os.path.splitext(os.path.basename(self.filename))[0]
 
     def json(self):
         return self.items
