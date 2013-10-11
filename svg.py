@@ -18,6 +18,7 @@
 
 import sys
 import os
+import copy
 import re
 import numbers, math
 import xml.etree.ElementTree as etree
@@ -156,6 +157,20 @@ class Transformable:
     def ylength(self, y):
         return self.length(y, 'y')
 
+    def flatten(self):
+        '''Flatten the SVG objects nested list into a flat (1-D) list,
+        removing Groups'''
+        # http://rightfootin.blogspot.fr/2006/09/more-on-python-flatten.html
+        # Assigning a slice a[i:i+1] with a list actually replaces the a[i]
+        # element with the content of the assigned list
+        i = 0
+        flat = copy.deepcopy(self.items)
+        while i < len(flat):
+            while isinstance(flat[i], Group):
+                flat[i:i+1] = flat[i].items
+            i += 1
+        return flat
+
     def scale(self, ratio):
         for x in self.items:
             x.scale(ratio)
@@ -212,17 +227,6 @@ class Svg(Transformable):
 
         self.transform()
 
-       # Flatten XML tree into a one dimension list
-        self.flatten()
-
-    def flatten(self):
-        self.drawing = []
-        for i in self.items:
-            if isinstance(i, Group):
-                self.drawing += i.flatten()
-            else:
-                self.drawing.append(i)
-
     def title(self):
         t = self.root.find(svg_ns + 'title')
         if t is not None:
@@ -264,15 +268,6 @@ class Group(Transformable):
 
     def json(self):
         return {'Group ' + self.id : self.items}
-
-    def flatten(self):
-        ret = []
-        for i in self.items:
-            if isinstance(i, Group):
-                ret += i.flatten()
-            else:
-                ret.append(i)
-        return ret
 
 class Matrix:
     ''' SVG transformation matrix and its operations

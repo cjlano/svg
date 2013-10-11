@@ -51,7 +51,7 @@ cr = cairo.Context(surface)
 cr.set_source_rgb(0,0,0)
 cr.set_line_width(1)
 
-draw_with_cairo(cr, f.drawing)
+draw_with_cairo(cr, f.flatten())
 
 cr.stroke()
 
