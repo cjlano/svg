@@ -537,6 +537,50 @@ class Circle(Transformable):
     def simplify(self, precision):
         return self
 
+class Rect(Transformable):
+    '''SVG <rect>'''
+    # class Rect handles the <rect> tag
+    tag = 'rect'
+
+    def __init__(self, elt=None):
+        Transformable.__init__(self, elt)
+        if elt is not None:
+            self.P1 = Point(self.xlength(elt.get('x')),
+                            self.ylength(elt.get('y')))
+
+            self.P2 = Point(self.P1.x + self.xlength(elt.get('width')),
+                            self.P1.y + self.ylength(elt.get('height')))
+
+    def __repr__(self):
+        return '<Rect ' + self.id + '>'
+
+    def bbox(self):
+        '''Bounding box'''
+        xmin = min([p.x for p in (self.P1, self.P2)])
+        xmax = max([p.x for p in (self.P1, self.P2)])
+        ymin = min([p.y for p in (self.P1, self.P2)])
+        ymax = max([p.y for p in (self.P1, self.P2)])
+
+        return (Point(xmin,ymin), Point(xmax,ymax))
+
+    def transform(self, matrix):
+        self.P1 = self.matrix * self.P1
+        self.P2 = self.matrix * self.P2
+
+    def segments(self, precision=0):
+        # A rectangle is built with 4 segments
+        ret = []
+        Pa = Point(self.P1.x, self.P2.y)
+        Pb = Point(self.P2.x, self.P1.y)
+
+        ret.append([self.P1, Pa])
+        ret.append([Pa, self.P2])
+        ret.append([self.P2, Pb])
+        ret.append([Pb, self.P1])
+        return ret
+
+    def simplify(self, precision):
+        return self.segments(precision)
 
 # overwrite JSONEncoder for svg classes which have defined a .json() method
 class JSONEncoder(json.JSONEncoder):

@@ -23,11 +23,17 @@ def draw_with_cairo(cr, drawing):
             cx, cy = d.center.coord()
             cr.move_to(cx+d.radius, cy)
             cr.arc(cx, cy, d.radius, 0, 2*math.pi)
+        if isinstance(d, svg.Rect):
+            x1,y1 = d.P1.coord()
+            x2,y2 = d.P2.coord()
+            width = x2 - x1
+            height = y2 - y1
+            cr.rectangle(x1, y1, width, height)
 
 
 def draw_with_segments(cr, drawing):
     for d in drawing:
-        if isinstance(d, svg.Path):
+        if isinstance(d, (svg.Path,svg.Rect)):
             for l in d.segments(1):
                 x,y = l[0].coord()
                 cr.move_to(x,y)
