@@ -5,6 +5,7 @@ related to SVG parsing. It can be reused outside the scope of SVG.
 
 import math
 import numbers
+import operator
 
 class Point:
     def __init__(self, x=None, y=None):
@@ -313,13 +314,8 @@ def simplify_segment(segment, epsilon):
     l = Line(segment[0], segment[-1]) # Longest line
 
     # Find the furthest point from the line
-    maxDist = 0
-    index = None
-    for i,p in enumerate(segment[1:]):
-        dist = l.pdistance(p)
-        if (dist > maxDist):
-            maxDist = dist
-            index = i+1 # enumerate starts at segment[1]
+    index, maxDist = max([(i, l.pdistance(p)) for i,p in enumerate(segment)],
+            key=operator.itemgetter(1))
 
     if maxDist > epsilon:
         # Recursively call with segment splited in 2 on its furthest point
