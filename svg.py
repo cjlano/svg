@@ -21,6 +21,7 @@ import os
 import copy
 import re
 import xml.etree.ElementTree as etree
+import itertools
 import json
 from geometry import *
 
@@ -477,15 +478,16 @@ class Path(Transformable):
         '''Return a list of segments, each segment is ended by a MoveTo.
            A segment is a list of Points'''
         ret = []
-        seg = []
-        for x in self.items:
-            if isinstance(x, MoveTo):
-                if seg != []:
-                    ret.append(seg)
-                    seg = []
-            else:
-                seg += x.segments(precision)
-        ret.append(seg)
+        # group items separated by MoveTo
+        for moveTo, group in itertools.groupby(self.items,
+                lambda x: isinstance(x, MoveTo)):
+            # Use only non MoveTo item
+            if not moveTo:
+                # Generate segments for each relevant item
+                seg = [x.segments(precision) for x in group]
+                # Merge all segments into one
+                ret.append(list(itertools.chain.from_iterable(seg)))
+
         return ret
 
     def simplify(self, precision):
