@@ -22,6 +22,7 @@ import copy
 import re
 import xml.etree.ElementTree as etree
 import itertools
+import operator
 import json
 from geometry import *
 
@@ -533,8 +534,28 @@ class Circle(Transformable):
     def rotate(self, angle):
         self.center = self.center.rot(angle)
 
+    def P(self, t):
+        '''Return a Point on the Circle for t in [0..1]'''
+        x = self.center.x + self.radius * math.cos(2 * math.pi * t)
+        y = self.center.y + self.radius * math.sin(2 * math.pi * t)
+        return Point(x,y)
+
     def segments(self, precision=0):
-        return self
+        if self.radius < precision:
+            return [[self.center]]
+
+        p = [(0,self.P(0)), (1, self.P(1))]
+        d = 2 * self.radius
+
+        while d > precision:
+            p.sort(key=operator.itemgetter(0))
+            for (t1,p1),(t2,p2) in zip(p[:-1],p[1:]):
+                t = t1 + (t2 - t1)/2.
+                d = Line(p1, p2).pdistance(self.P(t))
+                p.append((t, self.P(t)))
+
+        ret = [x for t,x in p]
+        return [ret]
 
     def simplify(self, precision):
         return self

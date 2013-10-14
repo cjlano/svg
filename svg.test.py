@@ -33,16 +33,13 @@ def draw_with_cairo(cr, drawing):
 
 def draw_with_segments(cr, drawing):
     for d in drawing:
-        if isinstance(d, (svg.Path,svg.Rect)):
+        if hasattr(d, 'segments'):
             for l in d.segments(1):
                 x,y = l[0].coord()
                 cr.move_to(x,y)
                 for pt in l[1:]:
                     x,y = pt.coord()
                     cr.line_to(x,y)
-    #    elif isinstance(d, svg.Circle):
-    #        a,b = d.bbox()
-    #        draw.arc([int(x) for x in a.coord()+b.coord()],0,360,green)
         else:
             print("Unsupported SVG element")
 
