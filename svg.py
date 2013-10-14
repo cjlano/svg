@@ -570,15 +570,12 @@ class Rect(Transformable):
         self.P2 = self.matrix * self.P2
 
     def segments(self, precision=0):
-        # A rectangle is built with 4 segments
+        # A rectangle is built with a segment going thru 4 points
         ret = []
         Pa = Point(self.P1.x, self.P2.y)
         Pb = Point(self.P2.x, self.P1.y)
 
-        ret.append([self.P1, Pa])
-        ret.append([Pa, self.P2])
-        ret.append([self.P2, Pb])
-        ret.append([Pb, self.P1])
+        ret.append([self.P1, Pa, self.P2, Pb, self.P1])
         return ret
 
     def simplify(self, precision):
