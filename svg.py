@@ -620,6 +620,43 @@ class Rect(Transformable):
     def simplify(self, precision):
         return self.segments(precision)
 
+class Line(Transformable):
+    '''SVG <line>'''
+    # class Line handles the <line> tag
+    tag = 'line'
+
+    def __init__(self, elt=None):
+        Transformable.__init__(self, elt)
+        if elt is not None:
+            self.P1 = Point(self.xlength(elt.get('x1')),
+                            self.ylength(elt.get('y1')))
+            self.P2 = Point(self.xlength(elt.get('x2')),
+                            self.ylength(elt.get('y2')))
+            self.segment = Segment(self.P1, self.P2)
+
+    def __repr__(self):
+        return '<Line ' + self.id + '>'
+
+    def bbox(self):
+        '''Bounding box'''
+        xmin = min([p.x for p in (self.P1, self.P2)])
+        xmax = max([p.x for p in (self.P1, self.P2)])
+        ymin = min([p.y for p in (self.P1, self.P2)])
+        ymax = max([p.y for p in (self.P1, self.P2)])
+
+        return (Point(xmin,ymin), Point(xmax,ymax))
+
+    def transform(self, matrix):
+        self.P1 = self.matrix * self.P1
+        self.P2 = self.matrix * self.P2
+        self.segment = Segment(self.P1, self.P2)
+
+    def segments(self, precision=0):
+        return [self.segment.segments()]
+
+    def simplify(self, precision):
+        return self.segments(precision)
+
 # overwrite JSONEncoder for svg classes which have defined a .json() method
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
