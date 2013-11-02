@@ -135,36 +135,36 @@ class Angle:
     def __neg__(self):
         return Angle(Point(self.cos, -self.sin))
 
-class Line:
-    '''A line is an object defined by 2 points'''
+class Segment:
+    '''A segment is an object defined by 2 points'''
     def __init__(self, start, end):
         self.start = start
         self.end = end
 
     def __str__(self):
-        return 'Line from ' + str(self.start) + ' to ' + str(self.end)
+        return 'Segment from ' + str(self.start) + ' to ' + str(self.end)
 
     def segments(self, precision=0):
-        ''' Line segments is simply the segment start -> end'''
+        ''' Segments is simply the segment start -> end'''
         return [self.start, self.end]
 
     def length(self):
-        '''Line length, Pythagoras theorem'''
+        '''Segment length, Pythagoras theorem'''
         s = self.end - self.start
         return math.sqrt(s.x ** 2 + s.y ** 2)
 
     def pdistance(self, p):
-        '''Perpendicular distance between this Line and a given Point p'''
+        '''Perpendicular distance between this Segment and a given Point p'''
         if not isinstance(p, Point):
             return NotImplemented
 
         if self.start == self.end:
-        # Distance from a Point to another Point is length of a line
-            return Line(self.start, p).length()
+        # Distance from a Point to another Point is length of a segment
+            return Segment(self.start, p).length()
 
         s = self.end - self.start
         if s.x == 0:
-        # Vertical Line => pdistance is the difference of abscissa
+        # Vertical Segment => pdistance is the difference of abscissa
             return abs(self.start.x - p.x)
         else:
         # That's 2-D perpendicular distance formulae (ref: Wikipedia)
@@ -223,7 +223,7 @@ class Bezier:
         p1 = pts.pop()
         while pts:
             p2 = pts.pop()
-            l += Line(p1, p2).length()
+            l += Segment(p1, p2).length()
             p1 = p2
         return l
 
@@ -311,9 +311,9 @@ def simplify_segment(segment, epsilon):
     if len(segment) < 3 or epsilon <= 0:
         return segment[:]
 
-    l = Line(segment[0], segment[-1]) # Longest line
+    l = Segment(segment[0], segment[-1]) # Longest segment
 
-    # Find the furthest point from the line
+    # Find the furthest point from the segment
     index, maxDist = max([(i, l.pdistance(p)) for i,p in enumerate(segment)],
             key=operator.itemgetter(1))
 

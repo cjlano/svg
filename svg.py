@@ -370,7 +370,7 @@ class Path(Transformable):
 
             elif command == 'Z':
             # Close Path
-                l = Line(current_pt, start_pt)
+                l = Segment(current_pt, start_pt)
                 self.items.append(l)
 
 
@@ -391,7 +391,7 @@ class Path(Transformable):
                 if not absolute:
                     pt += current_pt
 
-                self.items.append(Line(current_pt, pt))
+                self.items.append(Segment(current_pt, pt))
                 current_pt = pt
 
             elif command in 'CQ':
@@ -553,7 +553,7 @@ class Ellipse(Transformable):
         while d > precision:
             for (t1,p1),(t2,p2) in zip(p[:-1],p[1:]):
                 t = t1 + (t2 - t1)/2.
-                d = Line(p1, p2).pdistance(self.P(t))
+                d = Segment(p1, p2).pdistance(self.P(t))
                 p.append((t, self.P(t)))
             p.sort(key=operator.itemgetter(0))
 
