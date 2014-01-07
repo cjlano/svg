@@ -1,9 +1,7 @@
-import os, sys
-import nose
-sys.path.append('..')
-import svg
+import os
+from svg import svg
 
-path = 'W3C_SVG_11_TestSuite/svg/'
+path = os.path.abspath(os.path.dirname(__file__)) + '/W3C_SVG_11_TestSuite/svg/'
 
 def test_files():
     for filename in os.listdir(path):

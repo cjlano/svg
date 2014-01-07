@@ -1,6 +1,11 @@
+# run from ../ using $ python -m svg.svg_test
+
+from __future__ import absolute_import
 import sys, os, math
-import svg
 import cairo
+
+# Import this package's svg module using absolute import
+from svg import svg
 
 def draw_with_cairo(cr, drawing):
     for d in drawing:

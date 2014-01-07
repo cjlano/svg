@@ -16,6 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from __future__ import absolute_import
 import sys
 import os
 import copy
@@ -24,7 +25,7 @@ import xml.etree.ElementTree as etree
 import itertools
 import operator
 import json
-from geometry import *
+from svg.geometry import *
 
 svg_ns = '{http://www.w3.org/2000/svg}'
 

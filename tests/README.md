@@ -11,5 +11,5 @@ Extract it:
 
 Test is using [Python nose](http://nose.readthedocs.org/en/latest/index.html). Install it for your environment to run the test.
 
-    python2 testsuite.py
+    nosetests testsuite.py
 
