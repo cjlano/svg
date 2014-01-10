@@ -12,5 +12,5 @@ path = 'W3C_SVG_11_TestSuite/svg/'
 
 for f in os.listdir(path):
     if os.path.splitext(f)[1] == '.svg':
-        svg.Svg(path + f)
+        svg.parse(path + f)
 

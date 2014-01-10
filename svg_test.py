@@ -1,11 +1,7 @@
-# run from ../ using $ python -m svg.svg_test
-
-from __future__ import absolute_import
 import sys, os, math
 import cairo
 
-# Import this package's svg module using absolute import
-from svg import svg
+import svg
 
 def draw_with_cairo(cr, drawing):
     for d in drawing:
@@ -48,7 +44,7 @@ def draw_with_segments(cr, drawing):
         else:
             print("Unsupported SVG element")
 
-f = svg.Svg(sys.argv[1])
+f = svg.parse(sys.argv[1])
 
 a,b = f.bbox()
 
