@@ -1,7 +1,8 @@
-__all__ = ['geometry', 'svg']
+#__all__ = ['geometry', 'svg']
+
+from .svg import *
 
 def parse(filename):
-    from . import svg
     f = svg.Svg(filename)
     return f
 

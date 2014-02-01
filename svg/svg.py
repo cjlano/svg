@@ -25,7 +25,7 @@ import xml.etree.ElementTree as etree
 import itertools
 import operator
 import json
-from svg.geometry import *
+from .geometry import *
 
 svg_ns = '{http://www.w3.org/2000/svg}'
 
