@@ -268,7 +268,7 @@ class Bezier:
         if n < 10: n = 10
         if n > 1000 : n = 1000
 
-        for t in range(0, n):
+        for t in range(0, n+1):
             segments.append(self._bezierN(float(t)/n))
         return segments
 
